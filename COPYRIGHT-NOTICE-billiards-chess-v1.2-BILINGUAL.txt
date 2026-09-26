@@ -66,3 +66,10 @@ This document is a copyright notice for the billiards-chess v1.2 project and is 
 © 2026 Kasuunfisble. All rights reserved.
 Author / 作者: bilibili：Kasuunfisble
 Project / 项目: billiards-chess v1.2
+
+
+Room-unified settings / 房间统一设置
+--------------------------------
+The v1.2 online room system may synchronize rule-affecting settings from the room server to connected players, including piece size, knight pass-through and avoidance radius, custom weights, capture-angle tolerances, and clock rules. Animation speed and display glyph preferences remain client-local.
+
+v1.2 联网房间规则设置可由房间服务器统一同步到已连接玩家，包括棋子大小、马可穿透及避碰范围、自定义重量、吃子角度容差和计时规则；动画速度与棋子图标等显示设置保持各端独立。
