@@ -14,10 +14,232 @@ const MAX_PLAYERS_PER_ROOM = 2;
 // 管理端总开关。
 // 每个房间自己的换位权限默认关闭，由当前执棋者控制。
 const ALLOW_SWAP_REQUESTS =
-  String(process.env.ALLOW_SWAP_REQUESTS || 'true').toLowerCase() !== 'false';
+  String(
+    process.env.ALLOW_SWAP_REQUESTS || 'true'
+  ).toLowerCase() !== 'false';
 
 let nextClientId = 1;
 let nextRequestId = 1;
+
+
+/* =========================================================
+   房间默认统一设置
+   ========================================================= */
+
+const DEFAULT_ROOM_SETTINGS = Object.freeze({
+  pieceSizeScale: 0.62,
+
+  knightPassEnabled: true,
+
+  knightPassRadiusCells: 1.5,
+
+  customWeightEnabled: false,
+
+  customWeight: {
+    P: 1,
+    N: 3,
+    B: 3,
+    R: 5,
+    Q: 9,
+    K: 15
+  },
+
+  pawnCaptureAngleDeg: 22.5,
+
+  pieceCaptureAngleDeg: 22.5,
+
+  clockEnabled: true,
+
+  clockMode: 'total',
+
+  totalTimeMs:
+    15 * 60 * 1000,
+
+  moveTimeMs:
+    30 * 1000
+});
+
+
+/* =========================================================
+   设置合法化
+   ========================================================= */
+
+function sanitizeRoomSettings(input) {
+  const x =
+    input &&
+    typeof input === 'object'
+      ? input
+      : {};
+
+  const weights =
+    x.customWeight &&
+    typeof x.customWeight === 'object'
+      ? x.customWeight
+      : {};
+
+  const num = (
+    value,
+    min,
+    max,
+    fallback
+  ) => {
+
+    const n =
+      Number(value);
+
+    if (
+      !Number.isFinite(n)
+    ) {
+      return fallback;
+    }
+
+    return Math.max(
+      min,
+      Math.min(max, n)
+    );
+  };
+
+
+  return {
+
+    pieceSizeScale:
+      num(
+        x.pieceSizeScale,
+        0.2,
+        1,
+        DEFAULT_ROOM_SETTINGS
+          .pieceSizeScale
+      ),
+
+
+    knightPassEnabled:
+      x.knightPassEnabled !== false,
+
+
+    knightPassRadiusCells:
+      num(
+        x.knightPassRadiusCells,
+        0,
+        3,
+        DEFAULT_ROOM_SETTINGS
+          .knightPassRadiusCells
+      ),
+
+
+    customWeightEnabled:
+      x.customWeightEnabled === true,
+
+
+    customWeight: {
+
+      P:
+        num(
+          weights.P,
+          0.1,
+          100,
+          1
+        ),
+
+      N:
+        num(
+          weights.N,
+          0.1,
+          100,
+          3
+        ),
+
+      B:
+        num(
+          weights.B,
+          0.1,
+          100,
+          3
+        ),
+
+      R:
+        num(
+          weights.R,
+          0.1,
+          100,
+          5
+        ),
+
+      Q:
+        num(
+          weights.Q,
+          0.1,
+          100,
+          9
+        ),
+
+      K:
+        num(
+          weights.K,
+          0.1,
+          100,
+          15
+        )
+    },
+
+
+    pawnCaptureAngleDeg:
+      num(
+        x.pawnCaptureAngleDeg,
+        0,
+        45,
+        DEFAULT_ROOM_SETTINGS
+          .pawnCaptureAngleDeg
+      ),
+
+
+    pieceCaptureAngleDeg:
+      num(
+        x.pieceCaptureAngleDeg,
+        0,
+        45,
+        DEFAULT_ROOM_SETTINGS
+          .pieceCaptureAngleDeg
+      ),
+
+
+    clockEnabled:
+      x.clockEnabled !== false,
+
+
+    clockMode:
+      x.clockMode === 'move'
+        ? 'move'
+        : 'total',
+
+
+    totalTimeMs:
+      num(
+        x.totalTimeMs,
+        60 * 1000,
+        180 * 60 * 1000,
+        DEFAULT_ROOM_SETTINGS
+          .totalTimeMs
+      ),
+
+
+    moveTimeMs:
+      num(
+        x.moveTimeMs,
+        5 * 1000,
+        600 * 1000,
+        DEFAULT_ROOM_SETTINGS
+          .moveTimeMs
+      )
+  };
+}
+
+
+function settingsEqual(a, b) {
+  return (
+    JSON.stringify(a) ===
+    JSON.stringify(b)
+  );
+}
 
 
 /* =========================================================
@@ -26,32 +248,61 @@ let nextRequestId = 1;
 
 function createRoom(id) {
   return {
+
     id,
-    name: `房间 ${id}`,
 
-    clients: new Set(),
+    name:
+      `房间 ${id}`,
 
-    hostId: null,
+    clients:
+      new Set(),
+
+    hostId:
+      null,
 
     players: {
-      white: null,
-      black: null
+
+      white:
+        null,
+
+      black:
+        null
     },
 
-    pendingSwaps: new Map(),
+    pendingSwaps:
+      new Map(),
 
-    // 每个房间默认关闭换位。
-    swapEnabled: false,
+    // 默认关闭。
+    swapEnabled:
+      false,
 
-    // 服务器保存该房间最后一个完整游戏状态。
-    state: null
+    // 最新完整棋盘状态。
+    state:
+      null,
+
+    // 房间统一规则。
+    settings:
+      sanitizeRoomSettings(
+        DEFAULT_ROOM_SETTINGS
+      ),
+
+    // 第一次成功出手后锁定。
+    gameStarted:
+      false
   };
 }
 
 
-const rooms = new Map();
+const rooms =
+  new Map();
 
-for (let i = 1; i <= MAX_ROOMS; i++) {
+
+for (
+  let i = 1;
+  i <= MAX_ROOMS;
+  i++
+) {
+
   rooms.set(
     String(i),
     createRoom(i)
@@ -63,180 +314,188 @@ for (let i = 1; i <= MAX_ROOMS; i++) {
    HTTP
    ========================================================= */
 
-const server = http.createServer(
-  (req, res) => {
+const server =
+  http.createServer(
+    (req, res) => {
 
-    const url = new URL(
-      req.url,
-      `http://${req.headers.host || 'localhost'}`
-    );
-
-
-    /* -----------------------------------------------------
-       健康检查
-       ----------------------------------------------------- */
-
-    if (
-      url.pathname === '/health'
-    ) {
-
-      res.writeHead(
-        200,
-        {
-          'Content-Type':
-            'application/json; charset=utf-8',
-
-          'Cache-Control':
-            'no-cache'
-        }
-      );
+      const url =
+        new URL(
+          req.url,
+          `http://${
+            req.headers.host ||
+            'localhost'
+          }`
+        );
 
 
-      res.end(
-        JSON.stringify({
-          ok: true,
+      /* ---------------------------------------------------
+         /health
+         --------------------------------------------------- */
 
-          service:
-            'billiards-chess-relay',
+      if (
+        url.pathname ===
+        '/health'
+      ) {
 
-          version:
-            '1.2',
+        res.writeHead(
+          200,
+          {
+            'Content-Type':
+              'application/json; charset=utf-8',
 
-          author:
-            'bilibili：Kasuunfisble',
-
-          rooms:
-            MAX_ROOMS,
-
-          maxClientsPerRoom:
-            MAX_CLIENTS_PER_ROOM,
-
-          swapRequestsEnabled:
-            ALLOW_SWAP_REQUESTS,
-
-          swapPermission:
-            'player-controlled-default-off'
-        })
-      );
+            'Cache-Control':
+              'no-cache'
+          }
+        );
 
 
-      return;
-    }
+        res.end(
+          JSON.stringify({
+
+            ok:
+              true,
+
+            service:
+              'billiards-chess-relay',
+
+            version:
+              '1.2',
+
+            author:
+              'bilibili：Kasuunfisble',
+
+            rooms:
+              MAX_ROOMS,
+
+            maxClientsPerRoom:
+              MAX_CLIENTS_PER_ROOM,
+
+            swapRequestsEnabled:
+              ALLOW_SWAP_REQUESTS,
+
+            swapPermission:
+              'player-controlled-default-off'
+          })
+        );
 
 
-    /* -----------------------------------------------------
-       房间大厅 HTTP 接口
-       
-       前端现在通过：
-       GET /rooms
-       
-       获取实时房间状态。
-       ----------------------------------------------------- */
-
-    if (
-      url.pathname === '/rooms'
-    ) {
-
-      res.writeHead(
-        200,
-        {
-          'Content-Type':
-            'application/json; charset=utf-8',
-
-          'Cache-Control':
-            'no-store'
-        }
-      );
+        return;
+      }
 
 
-      res.end(
-        JSON.stringify({
-          ok: true,
+      /* ---------------------------------------------------
+         /rooms
+         
+         房间大厅 HTTP 接口。
+         --------------------------------------------------- */
 
-          version:
-            '1.2',
+      if (
+        url.pathname ===
+        '/rooms'
+      ) {
 
-          rooms:
-            roomList(),
+        res.writeHead(
+          200,
+          {
+            'Content-Type':
+              'application/json; charset=utf-8',
 
-          swapRequestsEnabled:
-            ALLOW_SWAP_REQUESTS
-        })
-      );
+            'Cache-Control':
+              'no-store'
+          }
+        );
 
 
-      return;
-    }
+        res.end(
+          JSON.stringify({
+
+            ok:
+              true,
+
+            version:
+              '1.2',
+
+            rooms:
+              roomList(),
+
+            swapRequestsEnabled:
+              ALLOW_SWAP_REQUESTS
+          })
+        );
 
 
-    /* -----------------------------------------------------
-       游戏 HTML
-       ----------------------------------------------------- */
+        return;
+      }
 
-    if (
-      url.pathname === '/' ||
-      url.pathname === '/index.html'
-    ) {
 
-      fs.readFile(
-        HTML_FILE,
-        (err, data) => {
+      /* ---------------------------------------------------
+         游戏页面
+         --------------------------------------------------- */
 
-          if (err) {
+      if (
+        url.pathname === '/' ||
+        url.pathname === '/index.html'
+      ) {
+
+        fs.readFile(
+          HTML_FILE,
+          (err, data) => {
+
+            if (err) {
+
+              res.writeHead(
+                500,
+                {
+                  'Content-Type':
+                    'text/plain; charset=utf-8'
+                }
+              );
+
+
+              res.end(
+                'HTML file not found'
+              );
+
+
+              return;
+            }
+
 
             res.writeHead(
-              500,
+              200,
               {
                 'Content-Type':
-                  'text/plain; charset=utf-8'
+                  'text/html; charset=utf-8',
+
+                'Cache-Control':
+                  'no-cache'
               }
             );
 
 
-            res.end(
-              'HTML file not found'
-            );
-
-
-            return;
+            res.end(data);
           }
+        );
 
 
-          res.writeHead(
-            200,
-            {
-              'Content-Type':
-                'text/html; charset=utf-8',
-
-              'Cache-Control':
-                'no-cache'
-            }
-          );
+        return;
+      }
 
 
-          res.end(data);
+      res.writeHead(
+        404,
+        {
+          'Content-Type':
+            'text/plain; charset=utf-8'
         }
       );
 
 
-      return;
+      res.end(
+        'Not found'
+      );
     }
-
-
-    res.writeHead(
-      404,
-      {
-        'Content-Type':
-          'text/plain; charset=utf-8'
-      }
-    );
-
-
-    res.end(
-      'Not found'
-    );
-  }
-);
+  );
 
 
 const wss =
@@ -246,7 +505,7 @@ const wss =
 
 
 /* =========================================================
-   基础工具
+   基础函数
    ========================================================= */
 
 function send(ws, obj) {
@@ -319,17 +578,21 @@ function participantList(room) {
     ...room.clients
   ].map(
     ws => ({
+
       id:
         ws.clientId,
 
       name:
-        ws.name || '玩家',
+        ws.name ||
+        '玩家',
 
       role:
-        ws.role || null,
+        ws.role ||
+        null,
 
       mode:
-        ws.mode || 'spectator'
+        ws.mode ||
+        'spectator'
     })
   );
 }
@@ -337,17 +600,6 @@ function participantList(room) {
 
 /* =========================================================
    房间列表
-   =========================================================
-
-   返回：
-
-   - 房间名
-   - 总人数
-   - 执棋人数
-   - 旁观人数
-   - 白方名称
-   - 黑方名称
-   - 换位状态
    ========================================================= */
 
 function roomList() {
@@ -403,13 +655,10 @@ function roomList() {
 }
 
 
-/* =========================================================
-   广播房间大厅状态
-   ========================================================= */
-
 function sendRoomList() {
 
   broadcastAll({
+
     type:
       'room-list',
 
@@ -422,15 +671,12 @@ function sendRoomList() {
 }
 
 
-/* =========================================================
-   广播当前房间完整状态
-   ========================================================= */
-
 function sendRoomUpdate(room) {
 
   broadcast(
     room,
     {
+
       type:
         'room-update',
 
@@ -457,18 +703,24 @@ function sendRoomUpdate(room) {
         room.swapEnabled,
 
       state:
-        room.state
+        room.state,
+
+      // ★ 房间统一设置
+      roomSettings:
+        room.settings,
+
+      gameStarted:
+        room.gameStarted
     }
   );
 
 
-  // 同步大厅。
   sendRoomList();
 }
 
 
 /* =========================================================
-   清理换位请求
+   换位请求清理
    ========================================================= */
 
 function clearSwapRequests(
@@ -494,7 +746,7 @@ function clearSwapRequests(
 
 
 /* =========================================================
-   根据 ID 找客户端
+   找客户端
    ========================================================= */
 
 function findClient(
@@ -515,12 +767,13 @@ function findClient(
     }
   }
 
+
   return null;
 }
 
 
 /* =========================================================
-   第一位玩家
+   玩家分配
    ========================================================= */
 
 function assignFirstPlayer(
@@ -568,10 +821,6 @@ function assignFirstPlayer(
 }
 
 
-/* =========================================================
-   第二位玩家
-   ========================================================= */
-
 function assignSecondPlayer(
   room,
   ws
@@ -595,10 +844,6 @@ function assignSecondPlayer(
     'player';
 }
 
-
-/* =========================================================
-   自动找空缺执棋席
-   ========================================================= */
 
 function assignNextOpenPlayer(
   room,
@@ -643,51 +888,7 @@ function assignNextOpenPlayer(
 }
 
 
-/* =========================================================
-   释放执棋身份
-   ========================================================= */
-
-function releasePlayerRole(
-  room,
-  ws
-) {
-
-  if (
-    ws.role === 'white' &&
-    room.players.white === ws
-  ) {
-
-    room.players.white =
-      null;
-  }
-
-
-  if (
-    ws.role === 'black' &&
-    room.players.black === ws
-  ) {
-
-    room.players.black =
-      null;
-  }
-
-
-  ws.role =
-    null;
-
-
-  ws.mode =
-    'spectator';
-}
-
-
-/* =========================================================
-   旁观者自动补位
-   ========================================================= */
-
-function promoteSpectator(
-  room
-) {
+function promoteSpectator(room) {
 
   if (
     playerCount(room) >=
@@ -799,14 +1000,10 @@ wss.on(
       true;
 
 
-    /*
-     * 新连接建立后，
-     * 立即发送当前 1～10 号房间状态。
-     */
-
     send(
       ws,
       {
+
         type:
           'room-list',
 
@@ -861,9 +1058,9 @@ wss.on(
         }
 
 
-        /* =================================================
+        /* ===============================================
            加入房间
-           ================================================= */
+           =============================================== */
 
         if (
           msg.type ===
@@ -968,14 +1165,32 @@ wss.on(
 
 
           /*
-           * 第一位：
-           * 可以选择白/黑/随机。
-           *
-           * 第二位：
-           * 自动成为另一方。
-           *
-           * 第三位以后：
-           * 自动成为旁观者。
+           * 第一个玩家进入空房间：
+           * 使用其本地当前规则作为房间初始规则。
+           */
+
+          if (
+            wasEmpty
+          ) {
+
+            room.settings =
+              sanitizeRoomSettings(
+                msg.initialSettings ||
+                DEFAULT_ROOM_SETTINGS
+              );
+
+
+            room.gameStarted =
+              false;
+
+
+            room.state =
+              null;
+          }
+
+
+          /*
+           * 分配席位。
            */
 
           if (
@@ -1033,9 +1248,15 @@ wss.on(
           }
 
 
+          /*
+           * 给刚加入的客户端：
+           * 当前角色、房间设置、游戏状态。
+           */
+
           send(
             ws,
             {
+
               type:
                 'joined',
 
@@ -1081,16 +1302,22 @@ wss.on(
 
               swapEnabled:
                 ALLOW_SWAP_REQUESTS &&
-                room.swapEnabled
+                room.swapEnabled,
+
+              // ★ 房间统一设置
+              roomSettings:
+                room.settings,
+
+              gameStarted:
+                room.gameStarted
             }
           );
 
 
           /*
-           * 第二位执棋者进入。
-           *
-           * 直接告诉房主：
-           * 把最新完整状态发给这个新玩家。
+           * 第二位执棋者进入：
+           * 要求房主把完整棋盘状态
+           * 定向发给新加入者。
            */
 
           if (
@@ -1110,6 +1337,7 @@ wss.on(
               send(
                 host,
                 {
+
                   type:
                     'peer-joined',
 
@@ -1128,6 +1356,7 @@ wss.on(
               send(
                 host,
                 {
+
                   type:
                     'request-state',
 
@@ -1143,18 +1372,20 @@ wss.on(
 
 
           /*
-           * 新进入的旁观者直接获得
-           * 当前服务器缓存状态。
+           * 旁观者直接得到服务器缓存状态。
            */
 
           if (
-            ws.mode === 'spectator' &&
+            ws.mode ===
+              'spectator' &&
+
             room.state
           ) {
 
             send(
               ws,
               {
+
                 type:
                   'state',
 
@@ -1162,7 +1393,10 @@ wss.on(
                   roomId,
 
                 state:
-                  room.state
+                  room.state,
+
+                roomSettings:
+                  room.settings
               }
             );
           }
@@ -1177,9 +1411,9 @@ wss.on(
         }
 
 
-        /* =================================================
-           尚未加入房间
-           ================================================= */
+        /* ===============================================
+           未进入房间
+           =============================================== */
 
         if (
           !ws.room
@@ -1193,6 +1427,7 @@ wss.on(
             send(
               ws,
               {
+
                 type:
                   'room-list',
 
@@ -1225,9 +1460,9 @@ wss.on(
         }
 
 
-        /* =================================================
+        /* ===============================================
            请求状态
-           ================================================= */
+           =============================================== */
 
         if (
           msg.type ===
@@ -1247,6 +1482,7 @@ wss.on(
             send(
               host,
               {
+
                 type:
                   'request-state',
 
@@ -1265,6 +1501,7 @@ wss.on(
             send(
               ws,
               {
+
                 type:
                   'state',
 
@@ -1272,7 +1509,10 @@ wss.on(
                   ws.room,
 
                 state:
-                  room.state
+                  room.state,
+
+                roomSettings:
+                  room.settings
               }
             );
           }
@@ -1282,9 +1522,9 @@ wss.on(
         }
 
 
-        /* =================================================
-           修改房间名称
-           ================================================= */
+        /* ===============================================
+           房间改名
+           =============================================== */
 
         if (
           msg.type ===
@@ -1311,6 +1551,7 @@ wss.on(
           broadcast(
             room,
             {
+
               type:
                 'room-renamed',
 
@@ -1328,38 +1569,19 @@ wss.on(
 
           sendRoomList();
 
+
           return;
         }
 
 
-        /* =================================================
-           执棋者设置换位权限
-           ================================================= */
+        /* ===============================================
+           ★ 房间统一规则设置
+           =============================================== */
 
         if (
           msg.type ===
-          'set-swap-enabled'
+          'set-room-settings'
         ) {
-
-          if (
-            !ALLOW_SWAP_REQUESTS
-          ) {
-
-            send(
-              ws,
-              {
-                type:
-                  'swap-disabled',
-
-                message:
-                  '服务器已关闭换位请求功能'
-              }
-            );
-
-
-            return;
-          }
-
 
           /*
            * 只有执棋者可以修改。
@@ -1373,6 +1595,171 @@ wss.on(
             send(
               ws,
               {
+
+                type:
+                  'room-settings-rejected',
+
+                message:
+                  '只有执棋者可以修改房间统一规则'
+              }
+            );
+
+
+            return;
+          }
+
+
+          /*
+           * 第一次出手后服务器锁定。
+           */
+
+          if (
+            room.gameStarted
+          ) {
+
+            send(
+              ws,
+              {
+
+                type:
+                  'room-settings-rejected',
+
+                message:
+                  '本局已经开始，房间统一规则已锁定'
+              }
+            );
+
+
+            return;
+          }
+
+
+          const settings =
+            sanitizeRoomSettings(
+              msg.settings
+            );
+
+
+          /*
+           * 相同设置无需重复广播。
+           */
+
+          if (
+            settingsEqual(
+              settings,
+              room.settings
+            )
+          ) {
+
+            send(
+              ws,
+              {
+
+                type:
+                  'room-settings',
+
+                room:
+                  ws.room,
+
+                settings:
+                  room.settings,
+
+                by:
+                  ws.clientId,
+
+                byName:
+                  ws.name
+              }
+            );
+
+
+            return;
+          }
+
+
+          room.settings =
+            settings;
+
+
+          /*
+           * 广播给包括修改者在内的
+           * 全部房间客户端。
+           */
+
+          broadcast(
+            room,
+            {
+
+              type:
+                'room-settings',
+
+              room:
+                ws.room,
+
+              settings:
+                room.settings,
+
+              by:
+                ws.clientId,
+
+              byName:
+                ws.name
+            }
+          );
+
+
+          /*
+           * 房间大厅也同步。
+           */
+
+          sendRoomUpdate(
+            room
+          );
+
+
+          return;
+        }
+
+
+        /* ===============================================
+           换位权限
+           =============================================== */
+
+        if (
+          msg.type ===
+          'set-swap-enabled'
+        ) {
+
+          if (
+            !ALLOW_SWAP_REQUESTS
+          ) {
+
+            send(
+              ws,
+              {
+
+                type:
+                  'swap-disabled',
+
+                message:
+                  '服务器已关闭换位请求功能'
+              }
+            );
+
+
+            return;
+          }
+
+
+          if (
+            ws.mode !==
+            'player'
+          ) {
+
+            send(
+              ws,
+              {
+
                 type:
                   'swap-result',
 
@@ -1398,10 +1785,6 @@ wss.on(
             enabled;
 
 
-          /*
-           * 关闭后清空全部未完成请求。
-           */
-
           if (
             !enabled
           ) {
@@ -1415,6 +1798,7 @@ wss.on(
           broadcast(
             room,
             {
+
               type:
                 'swap-state',
 
@@ -1451,9 +1835,9 @@ wss.on(
         }
 
 
-        /* =================================================
+        /* ===============================================
            换位请求
-           ================================================= */
+           =============================================== */
 
         if (
           msg.type ===
@@ -1468,6 +1852,7 @@ wss.on(
             send(
               ws,
               {
+
                 type:
                   'swap-disabled',
 
@@ -1501,6 +1886,7 @@ wss.on(
             send(
               ws,
               {
+
                 type:
                   'swap-result',
 
@@ -1517,10 +1903,6 @@ wss.on(
           }
 
 
-          /*
-           * 两个旁观者不能互换。
-           */
-
           if (
             !target.role &&
             !ws.role
@@ -1529,6 +1911,7 @@ wss.on(
             send(
               ws,
               {
+
                 type:
                   'swap-result',
 
@@ -1544,11 +1927,6 @@ wss.on(
             return;
           }
 
-
-          /*
-           * 同一个请求方
-           * 只保留一条请求。
-           */
 
           clearSwapRequests(
             room,
@@ -1595,6 +1973,7 @@ wss.on(
           send(
             ws,
             {
+
               type:
                 'swap-pending',
 
@@ -1609,6 +1988,7 @@ wss.on(
           send(
             target,
             {
+
               type:
                 'swap-offer',
 
@@ -1633,9 +2013,9 @@ wss.on(
         }
 
 
-        /* =================================================
+        /* ===============================================
            换位接受 / 拒绝
-           ================================================= */
+           =============================================== */
 
         if (
           msg.type ===
@@ -1650,6 +2030,7 @@ wss.on(
             send(
               ws,
               {
+
                 type:
                   'swap-disabled',
 
@@ -1687,6 +2068,7 @@ wss.on(
             send(
               ws,
               {
+
                 type:
                   'swap-result',
 
@@ -1720,6 +2102,7 @@ wss.on(
             send(
               ws,
               {
+
                 type:
                   'swap-result',
 
@@ -1743,6 +2126,7 @@ wss.on(
             send(
               requester,
               {
+
                 type:
                   'swap-result',
 
@@ -1758,6 +2142,7 @@ wss.on(
             send(
               ws,
               {
+
                 type:
                   'swap-result',
 
@@ -1773,14 +2158,6 @@ wss.on(
             return;
           }
 
-
-          /*
-           * 玩家 ↔ 玩家
-           *
-           * 或
-           *
-           * 玩家 ↔ 旁观者
-           */
 
           const requesterRole =
             requester.role;
@@ -1892,11 +2269,6 @@ wss.on(
           }
 
 
-          /*
-           * 角色发生变化后，
-           * 清掉相关旧请求。
-           */
-
           clearSwapRequests(
             room,
             r =>
@@ -1917,6 +2289,7 @@ wss.on(
           send(
             requester,
             {
+
               type:
                 'swap-result',
 
@@ -1938,6 +2311,7 @@ wss.on(
           send(
             ws,
             {
+
               type:
                 'swap-result',
 
@@ -1965,9 +2339,9 @@ wss.on(
         }
 
 
-        /* =================================================
+        /* ===============================================
            游戏消息
-           ================================================= */
+           =============================================== */
 
         const relayTypes =
           new Set([
@@ -1990,21 +2364,21 @@ wss.on(
 
 
           /*
-           * 只有执棋者才能：
-           *
-           * shot
-           * castle
-           * restart
-           * timeout
-           *
-           * 旁观者只接收。
+           * 游戏操作必须由执棋者发送。
            */
 
           if (
-            msg.type === 'shot' ||
-            msg.type === 'castle' ||
-            msg.type === 'restart' ||
-            msg.type === 'timeout'
+            msg.type ===
+              'shot' ||
+
+            msg.type ===
+              'castle' ||
+
+            msg.type ===
+              'restart' ||
+
+            msg.type ===
+              'timeout'
           ) {
 
             if (
@@ -2016,11 +2390,6 @@ wss.on(
             }
 
 
-            /*
-             * 服务器写入实际角色，
-             * 不信任客户端自己上报的身份。
-             */
-
             msg.actorRole =
               ws.role ||
               null;
@@ -2028,12 +2397,12 @@ wss.on(
 
 
           /*
-           * 玩家发送完整状态：
-           * 保存到房间。
+           * 保存 state。
            */
 
           if (
-            msg.type === 'state' &&
+            msg.type ===
+              'state' &&
 
             ws.mode ===
               'player' &&
@@ -2044,17 +2413,105 @@ wss.on(
 
             room.state =
               msg.state;
+
+
+            /*
+             * 从客户端状态同步
+             * 开局锁定状态。
+             */
+
+            try {
+
+              const parsed =
+                JSON.parse(
+                  msg.state
+                );
+
+
+              room.gameStarted =
+                parsed.gameStarted ===
+                true;
+
+            } catch {}
           }
 
 
           /*
-           * 定向 state：
-           *
-           * 新玩家第一次进入时使用。
+           * 一旦有真正的游戏操作，
+           * 房间规则锁定。
            */
 
           if (
-            msg.type === 'state' &&
+            msg.type ===
+              'shot' ||
+
+            msg.type ===
+              'castle' ||
+
+            msg.type ===
+              'timeout'
+          ) {
+
+            room.gameStarted =
+              true;
+          }
+
+
+          /*
+           * restart 会解除规则锁定。
+           */
+
+          if (
+            msg.type ===
+              'restart'
+          ) {
+
+            room.gameStarted =
+              false;
+          }
+
+
+          /*
+           * 如果收到 restart state，
+           * 同样保存最新棋盘。
+           */
+
+          if (
+            msg.type ===
+              'restart' &&
+
+            typeof msg.state ===
+              'string'
+          ) {
+
+            room.state =
+              msg.state;
+
+
+            try {
+
+              const parsed =
+                JSON.parse(
+                  msg.state
+                );
+
+
+              room.gameStarted =
+                parsed.gameStarted ===
+                true;
+
+            } catch {}
+          }
+
+
+          /*
+           * 定向 state。
+           */
+
+          if (
+            msg.type ===
+              'state' &&
+
             msg.to
           ) {
 
@@ -2080,7 +2537,8 @@ wss.on(
           } else {
 
             /*
-             * 普通消息广播给其他人。
+             * 普通游戏消息发送给
+             * 其他房间成员。
              */
 
             broadcast(
@@ -2091,13 +2549,12 @@ wss.on(
           }
 
 
-          /*
-           * state 改变后刷新大厅人数/状态。
-           */
-
           if (
             msg.type ===
-            'state'
+              'state' ||
+
+            msg.type ===
+              'restart'
           ) {
 
             sendRoomList();
@@ -2111,7 +2568,7 @@ wss.on(
 
 
   /* =======================================================
-     断开
+     断开连接
      ======================================================= */
 
   ws.on(
@@ -2144,7 +2601,7 @@ wss.on(
 
 
       /*
-       * 第一时间从房间里删除。
+       * 立即从房间删除。
        */
 
       room.clients.delete(
@@ -2153,7 +2610,7 @@ wss.on(
 
 
       /*
-       * 删除所有和该用户有关的换位请求。
+       * 清理旧换位请求。
        */
 
       clearSwapRequests(
@@ -2182,8 +2639,8 @@ wss.on(
 
 
       /*
-       * 如果是执棋者，
-       * 明确释放棋位。
+       * 如果是执棋者离开，
+       * 释放他的执棋席位。
        */
 
       if (
@@ -2191,7 +2648,9 @@ wss.on(
       ) {
 
         if (
-          ws.role === 'white' &&
+          ws.role ===
+            'white' &&
+
           room.players.white ===
             ws
         ) {
@@ -2202,7 +2661,9 @@ wss.on(
 
 
         if (
-          ws.role === 'black' &&
+          ws.role ===
+            'black' &&
+
           room.players.black ===
             ws
         ) {
@@ -2213,7 +2674,7 @@ wss.on(
 
 
         /*
-         * 执棋者发生变化后，
+         * 执棋席位变化后，
          * 换位重新关闭。
          */
 
@@ -2235,7 +2696,8 @@ wss.on(
 
 
       /*
-       * 房间完全清空。
+       * 房间彻底没人：
+       * 房间恢复默认状态。
        */
 
       if (
@@ -2270,18 +2732,29 @@ wss.on(
           null;
 
 
+        room.settings =
+          sanitizeRoomSettings(
+            DEFAULT_ROOM_SETTINGS
+          );
+
+
+        room.gameStarted =
+          false;
+
+
         /*
-         * 立即广播空房间。
+         * 立即通知大厅。
          */
 
         sendRoomList();
+
 
         return;
       }
 
 
       /*
-       * 重新选择房主。
+       * 重新选房主。
        */
 
       pickNewHost(
@@ -2290,7 +2763,7 @@ wss.on(
 
 
       /*
-       * 执棋者离开：
+       * 有空缺执棋位时，
        * 自动提升最早旁观者。
        */
 
@@ -2303,6 +2776,7 @@ wss.on(
       broadcast(
         room,
         {
+
           type:
             'peer-left',
 
@@ -2323,17 +2797,13 @@ wss.on(
               : null,
 
           participants:
-            participantList(
-              room
-            )
+            participantList(room),
+
+          roomSettings:
+            room.settings
         }
       );
 
-
-      /*
-       * 自动成为执棋者的人，
-       * 收到新身份。
-       */
 
       if (
         promoted
@@ -2342,6 +2812,7 @@ wss.on(
         send(
           promoted,
           {
+
             type:
               'role-changed',
 
@@ -2355,9 +2826,7 @@ wss.on(
               promoted.mode,
 
             participants:
-              participantList(
-                room
-              ),
+              participantList(room),
 
             message:
               `你已自动接替${
@@ -2370,10 +2839,6 @@ wss.on(
         );
 
 
-        /*
-         * 新执棋者直接恢复最新状态。
-         */
-
         if (
           room.state
         ) {
@@ -2381,6 +2846,7 @@ wss.on(
           send(
             promoted,
             {
+
               type:
                 'state',
 
@@ -2388,7 +2854,10 @@ wss.on(
                 roomId,
 
               state:
-                room.state
+                room.state,
+
+              roomSettings:
+                room.settings
             }
           );
         }
@@ -2396,9 +2865,9 @@ wss.on(
 
 
       /*
-       * 最后再次广播完整房间状态。
+       * 最终广播完整房间状态。
        *
-       * 此时 white / black 已经是最终结果。
+       * 此时白方/黑方名称已经是最新。
        */
 
       sendRoomUpdate(
@@ -2406,7 +2875,6 @@ wss.on(
       );
     }
   );
-});
 
 
 /* =========================================================
@@ -2437,7 +2905,9 @@ const heartbeat =
 
 
         try {
+
           ws.ping();
+
         } catch {}
       }
 
@@ -2447,7 +2917,7 @@ const heartbeat =
 
 
 /* =========================================================
-   换位请求过期
+   换位请求自动过期
    ========================================================= */
 
 const swapCleanup =
@@ -2496,6 +2966,7 @@ const swapCleanup =
             send(
               requester,
               {
+
                 type:
                   'swap-result',
 
@@ -2511,6 +2982,7 @@ const swapCleanup =
             send(
               target,
               {
+
                 type:
                   'swap-result',
 
@@ -2531,7 +3003,7 @@ const swapCleanup =
 
 
 /* =========================================================
-   关闭
+   关闭服务器
    ========================================================= */
 
 function shutdown() {
@@ -2614,7 +3086,8 @@ server.listen(
       os.networkInterfaces();
 
 
-    const ips = [];
+    const ips =
+      [];
 
 
     for (
@@ -2629,7 +3102,9 @@ server.listen(
 
         if (
           net &&
-          net.family === 'IPv4' &&
+          net.family ===
+            'IPv4' &&
+
           !net.internal
         ) {
 
