@@ -135,6 +135,7 @@
         .swap-pending{font-size:10px;color:#f1c40f;margin-top:5px}
         .spectator-note{font-size:10px;opacity:.72;line-height:1.5;margin-top:5px}
         .swap-setting-note{font-size:10px;opacity:.72;line-height:1.5;margin-top:2px}
+        .room-unified-note{font-size:10px;opacity:.78;line-height:1.5;margin:5px 0 7px;padding:5px 7px;border:1px solid rgba(241,196,15,.18);border-radius:6px;background:rgba(241,196,15,.05)}
         .network-joined-actions{display:none;margin-top:7px}
         .network-joined-actions.show{display:block}
         .network-join-form.hidden{display:none}
@@ -379,6 +380,7 @@
         </div>
         <div class="panel" id="network-panel">
             <label>🌐 联网对战</label>
+            <div class="room-unified-note" id="room-unified-note">进入房间后，棋子大小、马可穿透与避碰范围、自定义重量、吃子容差和计时规则由房间服务器统一；动画速度、棋子图标等显示设置保持各端独立。</div>
             <div class="panel" id="room-status-panel">
                 <label>🏠 房间状态</label>
                 <div id="room-status-help">切换到联网对战后显示 1～10 号房间；房间状态每 1.5 秒从本地服务器同步一次，白方、黑方名称和人数会实时更新。</div>
@@ -639,6 +641,107 @@ function saveSnapshot(){
     turn,activePlayer,over,hasMoved,gameStarted,timeRemaining,clockRunning,clockMode,totalTimeMs,moveTimeMs,knightPassRadiusCells
   });
 }
+function getRoomSettings(){
+  const weights={};
+  document.querySelectorAll('#weight-panel input[data-piece]').forEach(inp=>{
+    const k=inp.dataset.piece;
+    const v=Math.max(0.1,Number(inp.value)||STD_WEIGHT[k]||1);
+    weights[k]=v;
+  });
+  return {
+    pieceSizeScale:Math.max(0.2,Math.min(1,pieceRadius*2/CELL)),
+    knightPassEnabled:!!kpEl.checked,
+    knightPassRadiusCells:Math.max(0,Math.min(3,knightPassRadiusCells)),
+    customWeightEnabled:!!useCustomWeight,
+    customWeight:{
+      P:weights.P ?? customWeight.P ?? 1,
+      N:weights.N ?? customWeight.N ?? 3,
+      B:weights.B ?? customWeight.B ?? 3,
+      R:weights.R ?? customWeight.R ?? 5,
+      Q:weights.Q ?? customWeight.Q ?? 9,
+      K:weights.K ?? customWeight.K ?? 15
+    },
+    pawnCaptureAngleDeg:PAWN_SIDE_TOL*180/Math.PI,
+    pieceCaptureAngleDeg:CAT*180/Math.PI,
+    clockEnabled:!!clockEnabled,
+    clockMode:clockMode,
+    totalTimeMs:totalTimeMs,
+    moveTimeMs:moveTimeMs
+  };
+}
+function applyRoomSettings(settings,fromRemote=true){
+  if(!settings||typeof settings!=='object')return;
+
+  const size=Math.max(0.2,Math.min(1,Number(settings.pieceSizeScale)||0.62));
+  pieceRadius=size*CELL/2;
+  ssEl.value=size.toFixed(2);
+  let tag=`${size.toFixed(2)}×`;
+  if(Math.abs(size-0.62)<0.015)tag+=' (可穿透)';
+  else if(Math.abs(size-1)<0.015)tag+=' (满格)';
+  else if(Math.abs(size-0.2)<0.015)tag+=' (最小)';
+  slEl.textContent=tag;
+
+  kpEl.checked=settings.knightPassEnabled!==false;
+  knightPassOptionsEl.classList.toggle('hidden',!kpEl.checked);
+  knightPassRadiusCells=Math.max(0,Math.min(3,Number(settings.knightPassRadiusCells)||0));
+  knightPassRadiusEl.value=String(knightPassRadiusCells);
+  knightPassRadiusLabelEl.textContent=`${knightPassRadiusCells.toFixed(2).replace(/\.00$/,'').replace(/(\.\d)0$/,'$1')}格`;
+
+  useCustomWeight=!!settings.customWeightEnabled;
+  wmEl.checked=useCustomWeight;
+  const incoming=settings.customWeight&&typeof settings.customWeight==='object'?settings.customWeight:{};
+  customWeight={
+    P:Math.max(0.1,Number(incoming.P)||1),
+    N:Math.max(0.1,Number(incoming.N)||3),
+    B:Math.max(0.1,Number(incoming.B)||3),
+    R:Math.max(0.1,Number(incoming.R)||5),
+    Q:Math.max(0.1,Number(incoming.Q)||9),
+    K:Math.max(0.1,Number(incoming.K)||15)
+  };
+  wpEl.classList.toggle('show',useCustomWeight);
+  wpEl.querySelectorAll('input[data-piece]').forEach(inp=>{
+    const k=inp.dataset.piece;
+    if(Number.isFinite(customWeight[k]))inp.value=String(customWeight[k]);
+  });
+
+  const pawnDeg=Number(settings.pawnCaptureAngleDeg);
+  const pieceDeg=Number(settings.pieceCaptureAngleDeg);
+  if(Number.isFinite(pawnDeg)){
+    const v=Math.max(0,Math.min(45,pawnDeg));
+    PAWN_SIDE_TOL=v*Math.PI/180;
+    PAWN_CAP_AIM_TOL=PAWN_SIDE_TOL;
+  }
+  if(Number.isFinite(pieceDeg))CAT=Math.max(0,Math.min(45,pieceDeg))*Math.PI/180;
+  updateCaptureAngleUI();
+
+  if(typeof settings.clockEnabled==='boolean')clockEnabled=settings.clockEnabled;
+  if(settings.clockMode==='total'||settings.clockMode==='move')clockMode=settings.clockMode;
+  if(Number.isFinite(settings.totalTimeMs))totalTimeMs=Math.max(60000,Math.min(180*60000,settings.totalTimeMs));
+  if(Number.isFinite(settings.moveTimeMs))moveTimeMs=Math.max(5000,Math.min(600000,settings.moveTimeMs));
+  updateClockConfigUI(true);
+  updateKnightPassRadiusHelp();
+
+  // 未开局时统一刷新初始计时；已经开局后规则已被服务器锁定。
+  if(!gameStarted){
+    const initial=clockMode==='total'?totalTimeMs:moveTimeMs;
+    timeRemaining={white:initial,black:initial};
+    clockRunning=false;
+    lastClockTick=performance.now();
+    updateClockUI();
+  }
+
+  if(roomUnifiedNoteEl&&fromRemote){
+    roomUnifiedNoteEl.textContent='✅ 房间统一规则已同步：两端使用同一套棋子大小、马可穿透/避碰、自定义重量、吃子容差和计时规则；动画速度、棋子图标等显示设置仍由各端独立调整。';
+  }
+}
+function queueRoomSettingsSync(){
+  clearTimeout(queueRoomSettingsSync.timer);
+  queueRoomSettingsSync.timer=setTimeout(()=>{
+    if(gameMode!=='network'||!networkConnected||networkRoleMode!=='player'||isCriticalSettingsLocked())return;
+    sendNetwork({type:'set-room-settings',room:networkRoom,settings:getRoomSettings()});
+  },80);
+}
+
 function restoreSnapshot(json,fromRemote=false){
   // 恢复棋盘前先取消正在等待/执行的电脑回合，避免旧 AI 结果回写到新局面。
   cancelAIThinking();
@@ -825,6 +928,7 @@ document.getElementById('knight-toggle-panel').addEventListener('click',e=>{
   kpEl.checked=!kpEl.checked;
   updateKnightPassUI();
   // 开关只影响下一次马出手；已经开始的马步不在移动过程中重新计算免碰撞名单。
+  queueRoomSettingsSync();
 });
 function updateKnightPassUI(){
   knightPassOptionsEl.classList.toggle('hidden',!kpEl.checked);
@@ -835,6 +939,8 @@ function updateKnightPassUI(){
 knightPassRadiusEl.addEventListener('input',()=>{if(isCriticalSettingsLocked())return;
   knightPassRadiusCells=Math.max(0,Math.min(3,Number(knightPassRadiusEl.value)||0));
   knightPassRadiusLabelEl.textContent=`${knightPassRadiusCells.toFixed(2).replace(/\.00$/,'').replace(/(\.\d)0$/,'$1')}格`;
+  updateKnightPassRadiusHelp();
+  queueRoomSettingsSync();
 });
 
 function updateKnightPassRadiusHelp(){
@@ -852,9 +958,11 @@ ssEl.addEventListener('input',()=>{if(isCriticalSettingsLocked())return;
   let tag=`${v.toFixed(2)}×`;
   if(Math.abs(v-0.62)<0.015)tag+=' (可穿透)';else if(Math.abs(v-1)<0.015)tag+=' (满格)';else if(Math.abs(v-0.2)<0.015)tag+=' (最小)';
   slEl.textContent=tag;
+  updateKnightPassRadiusHelp();
+  queueRoomSettingsSync();
 });
-wmEl.addEventListener('change',()=>{if(isCriticalSettingsLocked())return;useCustomWeight=wmEl.checked;wpEl.classList.toggle('show',useCustomWeight);});
-wpEl.querySelectorAll('input[data-piece]').forEach(inp=>inp.addEventListener('input',()=>{const k=inp.dataset.piece,v=parseFloat(inp.value);if(v>0)customWeight[k]=v;}));
+wmEl.addEventListener('change',()=>{if(isCriticalSettingsLocked())return;useCustomWeight=wmEl.checked;wpEl.classList.toggle('show',useCustomWeight);queueRoomSettingsSync();});
+wpEl.querySelectorAll('input[data-piece]').forEach(inp=>inp.addEventListener('input',()=>{if(isCriticalSettingsLocked())return;const k=inp.dataset.piece,v=parseFloat(inp.value);if(v>0)customWeight[k]=v;queueRoomSettingsSync();}));
 
 function setAngleLabel(el,labelEl,degrees){
   const v=Math.max(0,Math.min(45,Number(degrees)||0));
@@ -989,15 +1097,17 @@ pawnCaptureAngleEl.addEventListener('input',()=>{if(isCriticalSettingsLocked())r
   PAWN_SIDE_TOL=v*Math.PI/180;
   PAWN_CAP_AIM_TOL=v*Math.PI/180;
   setAngleLabel(pawnCaptureAngleEl,pawnCaptureAngleLabelEl,v);
+  queueRoomSettingsSync();
 });
 pieceCaptureAngleEl.addEventListener('input',()=>{if(isCriticalSettingsLocked())return;
   const v=Math.max(0,Math.min(45,parseFloat(pieceCaptureAngleEl.value)||0));
   CAT=v*Math.PI/180;
   setAngleLabel(pieceCaptureAngleEl,pieceCaptureAngleLabelEl,v);
+  queueRoomSettingsSync();
 });
-clockModeEl.addEventListener('change',()=>{if(isCriticalSettingsLocked())return;clockMode=clockModeEl.value;resetClock(false);});
-clockSettingEl.addEventListener('change',()=>{if(!isCriticalSettingsLocked())resetClock(false);});
-resetClockBtn.addEventListener('click',()=>{if(!isCriticalSettingsLocked())resetClock(false);});
+clockModeEl.addEventListener('change',()=>{if(isCriticalSettingsLocked())return;clockMode=clockModeEl.value;resetClock(false);queueRoomSettingsSync();});
+clockSettingEl.addEventListener('change',()=>{if(!isCriticalSettingsLocked()){resetClock(false);queueRoomSettingsSync();}});
+resetClockBtn.addEventListener('click',()=>{if(!isCriticalSettingsLocked()){resetClock(false);queueRoomSettingsSync();}});
 modeEl.addEventListener('change',updateModeUI);
 sideEl.addEventListener('change',()=>{if(isCriticalSettingsLocked())return;playerSide=sideEl.value;restartGame();});
 aiDifficultyEl.addEventListener('change',()=>{if(isCriticalSettingsLocked())return;aiDifficulty=aiDifficultyEl.value;restartGame();});
@@ -1047,6 +1157,7 @@ const spectatorNoteEl=document.getElementById('spectator-note');
 const swapPermissionEl=document.getElementById('swap-permission');
 const swapPermissionLabelEl=document.getElementById('swap-permission-label');
 const swapSettingNoteEl=document.getElementById('swap-setting-note');
+const roomUnifiedNoteEl=document.getElementById('room-unified-note');
 
 function escapeHtml(v){
   return String(v).replace(/[&<>'"]/g,ch=>({
@@ -1296,7 +1407,7 @@ function connectNetwork(){
   socket.addEventListener('open',()=>{
     networkConnected=true;remoteReady=false;networkBtn.textContent='已进入';
     setNetworkStatus(`已连接 · ${networkRoom} · 正在进入房间…`,true);
-    sendNetwork({type:'join',room,requestedRole:startRole,name,version:'1.2'});
+    sendNetwork({type:'join',room,requestedRole:startRole,name,version:'1.2',initialSettings:getRoomSettings()});
   });
   socket.addEventListener('message',ev=>{
     let msg;try{msg=JSON.parse(ev.data);}catch(e){return;}
@@ -1312,6 +1423,7 @@ function connectNetwork(){
       networkAssignedRole=msg.role||'';
       networkRoleMode=msg.mode||((msg.role)?'player':'spectator');
       networkSwapEnabled=msg.swapEnabled===true;
+      if(msg.roomSettings)applyRoomSettings(msg.roomSettings,true);
       playerSide=networkAssignedRole||playerSide;
       networkSwapControlledByPlayer=networkRoleMode==='player';
       if(networkAssignedRole)sideEl.value=networkAssignedRole;
@@ -1323,6 +1435,7 @@ function connectNetwork(){
       renderParticipants(msg.participants||[]);
       updateNetworkRoleUI(msg.host?'你是房主':''+(msg.canChooseStartRole?' · 你可设定初始执棋':''));
       if(msg.state)restoreSnapshot(msg.state,true);
+      if(msg.roomSettings)applyRoomSettings(msg.roomSettings,true);
       return;
     }
     if(msg.type==='peer-joined'){
@@ -1341,11 +1454,23 @@ function connectNetwork(){
       }
       return;
     }
+    if(msg.type==='room-settings') {
+      if(msg.settings)applyRoomSettings(msg.settings,true);
+      if(msg.by&&msg.by!==networkClientId&&roomUnifiedNoteEl){
+        roomUnifiedNoteEl.textContent=`✅ ${msg.byName||'对方'} 已更新房间统一规则，当前设置已自动同步到本机。`;
+      }
+      return;
+    }
+    if(msg.type==='room-settings-rejected'){
+      if(roomUnifiedNoteEl)roomUnifiedNoteEl.textContent=msg.message||'房间统一规则修改未被服务器接受。';
+      return;
+    }
     if(msg.type==='room-update'){
       networkRoomName=msg.roomName||networkRoomName;
       roomNameEl.value=networkRoomName;
       networkSwapEnabled=msg.swapEnabled===true;
       networkSwapControlledByPlayer=networkRoleMode==='player';
+      if(msg.roomSettings)applyRoomSettings(msg.roomSettings,true);
       renderParticipants(msg.participants||[]);
       if(msg.state&&typeof msg.state==='string'&&!gameStarted)restoreSnapshot(msg.state,true);
       updateNetworkRoleUI();
@@ -2315,6 +2440,7 @@ renderRoomList(Array.from({length:10},(_,i)=>({
   whiteName:'',blackName:'',swapEnabled:false
 })));
 updateModeUI(false);applySettingsLockUI();refreshNetworkUiLock();
+if(roomUnifiedNoteEl)roomUnifiedNoteEl.textContent='进入联网房间后，棋子大小、马可穿透与避碰范围、自定义重量、吃子容差和计时规则由房间服务器统一；动画速度、棋子图标等显示设置保持各端独立。';
 setSettingsOpen(false);
 // 默认本地双人；只有切换到“联网对战”后才显示并连接房间状态。
 if(gameMode==='network'){
