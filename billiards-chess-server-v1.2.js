@@ -56,7 +56,11 @@ const DEFAULT_ROOM_SETTINGS = Object.freeze({
     15 * 60 * 1000,
 
   moveTimeMs:
-    30 * 1000
+    30 * 1000,
+
+  // 房间统一悔棋上限。
+  undoLimit:
+    3
 });
 
 
@@ -229,6 +233,19 @@ function sanitizeRoomSettings(input) {
         600 * 1000,
         DEFAULT_ROOM_SETTINGS
           .moveTimeMs
+      ),
+
+
+    // 悔棋上限：0～99 次。
+    undoLimit:
+      Math.round(
+        num(
+          x.undoLimit,
+          0,
+          99,
+          DEFAULT_ROOM_SETTINGS
+            .undoLimit
+        )
       )
   };
 }
@@ -2566,280 +2583,246 @@ wss.on(
       });
 
 
-  /* =======================================================
-     断开连接
-     ======================================================= */
+    /* =======================================================
+       断开连接
+       ======================================================= */
 
-  ws.on(
-    'close',
-    () => {
+    ws.on(
+      'close',
+      () => {
 
-      const roomId =
-        ws.room;
-
-
-      if (!roomId) {
-        return;
-      }
+        const roomId =
+          ws.room;
 
 
-      const room =
-        rooms.get(
-          roomId
-        );
-
-
-      if (!room) {
-        return;
-      }
-
-
-      const wasPlayer =
-        ws.mode ===
-        'player';
-
-
-      /*
-       * 立即从房间删除。
-       */
-
-      room.clients.delete(
-        ws
-      );
-
-
-      /*
-       * 清理旧换位请求。
-       */
-
-      clearSwapRequests(
-        room,
-        req =>
-          req.fromId ===
-            ws.clientId ||
-
-          req.toId ===
-            ws.clientId
-      );
-
-
-      /*
-       * 房主离开。
-       */
-
-      if (
-        room.hostId ===
-        ws.clientId
-      ) {
-
-        room.hostId =
-          null;
-      }
-
-
-      /*
-       * 如果是执棋者离开，
-       * 释放他的执棋席位。
-       */
-
-      if (
-        wasPlayer
-      ) {
-
-        if (
-          ws.role ===
-            'white' &&
-
-          room.players.white ===
-            ws
-        ) {
-
-          room.players.white =
-            null;
+        if (!roomId) {
+          return;
         }
 
 
-        if (
-          ws.role ===
-            'black' &&
+        const room =
+          rooms.get(
+            roomId
+          );
 
-          room.players.black ===
-            ws
+
+        if (!room) {
+          return;
+        }
+
+
+        const wasPlayer =
+          ws.mode ===
+          'player';
+
+
+        /*
+         * 立即从房间删除。
+         */
+
+        room.clients.delete(
+          ws
+        );
+
+
+        /*
+         * 清理旧换位请求。
+         */
+
+        clearSwapRequests(
+          room,
+          req =>
+            req.fromId ===
+              ws.clientId ||
+
+            req.toId ===
+              ws.clientId
+        );
+
+
+        /*
+         * 房主离开。
+         */
+
+        if (
+          room.hostId ===
+          ws.clientId
         ) {
 
-          room.players.black =
+          room.hostId =
             null;
         }
 
 
         /*
-         * 执棋席位变化后，
-         * 换位重新关闭。
+         * 如果是执棋者离开，
+         * 释放他的执棋席位。
          */
 
-        room.swapEnabled =
-          false;
+        if (
+          wasPlayer
+        ) {
+
+          if (
+            ws.role ===
+              'white' &&
+
+            room.players.white ===
+              ws
+          ) {
+
+            room.players.white =
+              null;
+          }
 
 
-        clearSwapRequests(
+          if (
+            ws.role ===
+              'black' &&
+
+            room.players.black ===
+              ws
+          ) {
+
+            room.players.black =
+              null;
+          }
+
+
+          /*
+           * 执棋席位变化后，
+           * 换位重新关闭。
+           */
+
+          room.swapEnabled =
+            false;
+
+
+          clearSwapRequests(
+            room
+          );
+
+
+          ws.role =
+            null;
+
+          ws.mode =
+            'spectator';
+        }
+
+
+        /*
+         * 房间彻底没人：
+         * 房间恢复默认状态。
+         */
+
+        if (
+          room.clients.size ===
+          0
+        ) {
+
+          room.name =
+            `房间 ${room.id}`;
+
+
+          room.hostId =
+            null;
+
+
+          room.players.white =
+            null;
+
+
+          room.players.black =
+            null;
+
+
+          room.pendingSwaps.clear();
+
+
+          room.swapEnabled =
+            false;
+
+
+          room.state =
+            null;
+
+
+          room.settings =
+            sanitizeRoomSettings(
+              DEFAULT_ROOM_SETTINGS
+            );
+
+
+          room.gameStarted =
+            false;
+
+
+          /*
+           * 立即通知大厅。
+           */
+
+          sendRoomList();
+
+
+          return;
+        }
+
+
+        /*
+         * 重新选房主。
+         */
+
+        pickNewHost(
           room
         );
 
 
-        ws.role =
-          null;
-
-        ws.mode =
-          'spectator';
-      }
-
-
-      /*
-       * 房间彻底没人：
-       * 房间恢复默认状态。
-       */
-
-      if (
-        room.clients.size ===
-        0
-      ) {
-
-        room.name =
-          `房间 ${room.id}`;
-
-
-        room.hostId =
-          null;
-
-
-        room.players.white =
-          null;
-
-
-        room.players.black =
-          null;
-
-
-        room.pendingSwaps.clear();
-
-
-        room.swapEnabled =
-          false;
-
-
-        room.state =
-          null;
-
-
-        room.settings =
-          sanitizeRoomSettings(
-            DEFAULT_ROOM_SETTINGS
-          );
-
-
-        room.gameStarted =
-          false;
-
-
         /*
-         * 立即通知大厅。
+         * 有空缺执棋位时，
+         * 自动提升最早旁观者。
          */
 
-        sendRoomList();
+        const promoted =
+          wasPlayer
+            ? promoteSpectator(room)
+            : null;
 
 
-        return;
-      }
-
-
-      /*
-       * 重新选房主。
-       */
-
-      pickNewHost(
-        room
-      );
-
-
-      /*
-       * 有空缺执棋位时，
-       * 自动提升最早旁观者。
-       */
-
-      const promoted =
-        wasPlayer
-          ? promoteSpectator(room)
-          : null;
-
-
-      broadcast(
-        room,
-        {
-
-          type:
-            'peer-left',
-
-          room:
-            roomId,
-
-          count:
-            room.clients.size,
-
-          promotedClientId:
-            promoted
-              ? promoted.clientId
-              : null,
-
-          promotedRole:
-            promoted
-              ? promoted.role
-              : null,
-
-          participants:
-            participantList(room),
-
-          roomSettings:
-            room.settings
-        }
-      );
-
-
-      if (
-        promoted
-      ) {
-
-        send(
-          promoted,
+        broadcast(
+          room,
           {
 
             type:
-              'role-changed',
+              'peer-left',
 
-            clientId:
-              promoted.clientId,
+            room:
+              roomId,
 
-            role:
-              promoted.role,
+            count:
+              room.clients.size,
 
-            mode:
-              promoted.mode,
+            promotedClientId:
+              promoted
+                ? promoted.clientId
+                : null,
+
+            promotedRole:
+              promoted
+                ? promoted.role
+                : null,
 
             participants:
               participantList(room),
 
-            message:
-              `你已自动接替${
-                promoted.role ===
-                'white'
-                  ? '白方'
-                  : '黑方'
-              }`
+            roomSettings:
+              room.settings
           }
         );
 
 
         if (
-          room.state
+          promoted
         ) {
 
           send(
@@ -2847,34 +2830,69 @@ wss.on(
             {
 
               type:
-                'state',
+                'role-changed',
 
-              room:
-                roomId,
+              clientId:
+                promoted.clientId,
 
-              state:
-                room.state,
+              role:
+                promoted.role,
 
-              roomSettings:
-                room.settings
+              mode:
+                promoted.mode,
+
+              participants:
+                participantList(room),
+
+              message:
+                `你已自动接替${
+                  promoted.role ===
+                  'white'
+                    ? '白方'
+                    : '黑方'
+                }`
             }
           );
+
+
+          if (
+            room.state
+          ) {
+
+            send(
+              promoted,
+              {
+
+                type:
+                  'state',
+
+                room:
+                  roomId,
+
+                state:
+                  room.state,
+
+                roomSettings:
+                  room.settings
+              }
+            );
+          }
         }
+
+
+        /*
+         * 最终广播完整房间状态。
+         *
+         * 此时白方/黑方名称已经是最新。
+         */
+
+        sendRoomUpdate(
+          room
+        );
       }
-
-
-      /*
-       * 最终广播完整房间状态。
-       *
-       * 此时白方/黑方名称已经是最新。
-       */
-
-      sendRoomUpdate(
-        room
-      );
-    }
-  );
-});
+    );
+  }
+);
 
 
 /* =========================================================
