@@ -666,7 +666,8 @@ function getRoomSettings(){
     clockEnabled:!!clockEnabled,
     clockMode:clockMode,
     totalTimeMs:totalTimeMs,
-    moveTimeMs:moveTimeMs
+    moveTimeMs:moveTimeMs,
+    undoLimit:Math.max(0,Math.min(99,Math.round(Number(undoLimit)||3)))
   };
 }
 function applyRoomSettings(settings,fromRemote=true){
@@ -718,6 +719,10 @@ function applyRoomSettings(settings,fromRemote=true){
   if(settings.clockMode==='total'||settings.clockMode==='move')clockMode=settings.clockMode;
   if(Number.isFinite(settings.totalTimeMs))totalTimeMs=Math.max(60000,Math.min(180*60000,settings.totalTimeMs));
   if(Number.isFinite(settings.moveTimeMs))moveTimeMs=Math.max(5000,Math.min(600000,settings.moveTimeMs));
+  if(Number.isFinite(settings.undoLimit))undoLimit=Math.max(0,Math.min(99,Math.round(settings.undoLimit)));
+  undoLimitEl.value=String(undoLimit);
+  while(undoStack.length>undoLimit)undoStack.shift();
+  updateUndoUI();
   updateClockConfigUI(true);
   updateKnightPassRadiusHelp();
 
@@ -787,7 +792,7 @@ function doUndo(){
   }
 }
 function updateUndoUI(){undoBtn.textContent=`↩️ 悔棋 (${undoStack.length})`;undoBtn.disabled=undoStack.length===0;}
-undoLimitEl.addEventListener('input',()=>{if(isCriticalSettingsLocked())return;undoLimit=Math.max(0,Math.min(99,parseInt(undoLimitEl.value)||0));while(undoStack.length>undoLimit)undoStack.shift();updateUndoUI();});
+undoLimitEl.addEventListener('input',()=>{if(isCriticalSettingsLocked())return;undoLimit=Math.max(0,Math.min(99,parseInt(undoLimitEl.value)||0));undoLimitEl.value=String(undoLimit);while(undoStack.length>undoLimit)undoStack.shift();updateUndoUI();queueRoomSettingsSync();});
 undoBtn.addEventListener('click',doUndo);
 
 function toCanvas(x,y){return{x:x+BORDER,y:y+BORDER};}
