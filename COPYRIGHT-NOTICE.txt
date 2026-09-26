@@ -1,0 +1,25 @@
+COPYRIGHT NOTICE
+
+Project / 项目: billiards-chess v1.2
+Author / 作者: bilibili：Kasuunfisble
+Copyright / 版权所有: © 2026 Kasuunfisble. All rights reserved.
+
+This game may contain original source code, artwork, UI text, game-rule implementation,
+physics implementation, AI implementation, online room/relay logic, and original design elements.
+Unless a separate written license states otherwise, these materials are not granted for copying,
+redistribution, republication, modification, sublicensing, or commercial exploitation without the
+rights holder's permission, except where permitted by applicable law.
+
+v1.2 ROOM / SWAP NOTE
+Swap permission is disabled by default in online rooms. Only the White or Black player may enable
+or disable room swap permission. Spectators cannot change this permission.
+
+PROTECTION PRACTICES
+1. Keep the complete development repository private when you do not want to publish source code.
+2. Keep dated archives and release records for v1.2 and later releases.
+3. Retain the author attribution in the game UI, repository metadata, release notes, and website.
+4. Do not publish production source maps if you do not want to expose the original source structure.
+5. Browser-delivered JavaScript can be retrieved by users; client-side code cannot be made absolutely
+   secret. Important server-side algorithms and confidential logic should be kept on the server.
+
+This notice is a project notice and is not a substitute for jurisdiction-specific legal advice.

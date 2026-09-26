@@ -1,0 +1,68 @@
+billiards-chess v1.2 — 版权说明 / COPYRIGHT NOTICE
+
+项目名称 / Project Name: billiards-chess
+正式版本 / Release: v1.2
+作者 / Author: bilibili：Kasuunfisble
+版权声明 / Copyright Notice: © 2026 Kasuunfisble. All rights reserved.
+
+【中文】
+
+一、项目及原创内容
+本项目可能包含原创 HTML、JavaScript、CSS、用户界面文字、游戏规则实现、物理模拟实现、AI 实现、联网房间与中继逻辑、视觉设计、界面设计以及其他原创材料。
+
+除非另有书面许可或适用法律另有规定，未经权利人许可，不授权对上述原创材料进行复制、再发布、转载、公开发布、修改、再许可、出售、商业利用或制作衍生版本。
+
+二、作者署名
+在可以保留署名的发布、转载、演示或衍生版本中，请保留以下作者信息：
+作者：bilibili：Kasuunfisble
+
+三、v1.2 版本说明
+1. 联网模式采用 1～10 号固定房间，每个房间最多 10 人，其中最多 2 名执棋者，其余为旁观者。
+2. 房间名称、昵称、房间状态及相关联网逻辑属于本版本实现内容。
+3. 换位权限默认关闭；是否允许换位由房间内白方或黑方执棋者设置，旁观者不能修改该权限。
+4. 当前版本的客户端 JavaScript 仍需在浏览器中执行，因此不能保证客户端代码绝对保密。
+
+四、建议的版权保护措施
+1. 不希望公开源码时，请将完整开发仓库设置为 Private（私有）。
+2. 保存 v1.2 以及后续版本的带日期归档，并尽可能保留 Git 标签、版本记录或文件哈希。
+3. 在游戏界面、网站、仓库说明、发行说明和正式版本中保留作者署名。
+4. 如不希望暴露原始源码结构，生产环境不要公开 source map。
+5. 浏览器必须下载并执行客户端 JavaScript，因此客户端代码无法做到绝对保密。重要算法、服务器逻辑及其他需要保密的内容应放在服务端。
+6. 著作权通常保护具有独创性的表达，例如源代码及其他受保护表达；著作权并不会自动赋予对抽象算法、规则、方法或思想本身的排他权。
+7. 软件著作权登记、备案或其他权利证明方式及其法律效力因司法辖区而异。如有需要，可根据所在地法律考虑进行正式登记或留存其他证明材料。
+
+五、许可与法律说明
+本文件属于 billiards-chess v1.2 项目版权说明，不构成特定司法辖区的法律意见或法律服务。具体权利范围、登记方式、侵权认定及维权程序，应以适用法律为准。
+
+[ENGLISH]
+
+1. Project and Original Materials
+This project may contain original HTML, JavaScript, CSS, user-interface text, game-rule implementation, physics implementation, AI implementation, online room and relay logic, visual design, interface design, and other original materials.
+
+Unless otherwise authorized by a separate written license or required by applicable law, the rights holder does not grant permission to copy, redistribute, republish, publicly release, modify, sublicense, sell, commercially exploit, or create derivative versions of these original materials without permission.
+
+2. Author Attribution
+Where attribution can reasonably be retained in published, redistributed, demonstrated, or derivative versions, please retain the following author information:
+Author: bilibili：Kasuunfisble
+
+3. v1.2 Release Notes
+1. Online mode uses fixed rooms 1–10. Each room supports up to 10 connected clients, with at most 2 players and the remaining clients as spectators.
+2. Room names, nicknames, room status, and the related online-room logic are part of this release's implementation.
+3. Swap permission is disabled by default. It can be enabled or disabled only by the White or Black player in the room; spectators cannot change this permission.
+4. Client-side JavaScript must still be delivered to and executed by the browser, so client code cannot be made absolutely confidential.
+
+4. Recommended Copyright Protection Practices
+1. If you do not want to publish the source code, keep the complete development repository Private.
+2. Keep dated archives of v1.2 and later releases, and retain Git tags, release records, or file hashes where practical.
+3. Keep the author attribution in the game interface, website, repository description, release notes, and official releases.
+4. Do not publish production source maps if you do not want to expose the original source structure.
+5. Browser-delivered JavaScript must be downloaded and executed by the client, so client-side code cannot be made absolutely secret. Important algorithms, server-side logic, and other confidential materials should be kept on the server.
+6. Copyright generally protects original expression, such as source code and other copyrightable expression; it does not automatically grant exclusive rights over abstract algorithms, rules, methods, or ideas themselves.
+7. Software copyright registration, recordation, or other forms of rights documentation and their legal effects vary by jurisdiction. Where appropriate, consider formal registration or other evidentiary measures under the laws applicable to you.
+
+5. License and Legal Notice
+This document is a copyright notice for the billiards-chess v1.2 project and is not a substitute for jurisdiction-specific legal advice or legal services. The exact scope of rights, registration options, infringement standards, and enforcement procedures are governed by applicable law.
+
+© 2026 Kasuunfisble. All rights reserved.
+Author / 作者: bilibili：Kasuunfisble
+Project / 项目: billiards-chess v1.2

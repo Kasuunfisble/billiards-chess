@@ -1,0 +1,13 @@
+{
+  "name": "billiards-chess",
+  "private": true,
+  "version": "1.2.0",
+  "description": "billiards-chess v1.2 · 10-room online lobby, spectators and player-controlled swap permission (default off) · Author: bilibili：Kasuunfisble",
+  "main": "billiards-chess-server-v1.2.js",
+  "scripts": {
+    "start": "node billiards-chess-server-v1.2.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  }
+}

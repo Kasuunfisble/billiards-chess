@@ -1,0 +1,2328 @@
+<!-- billiards-chess v1.2 | Author: bilibili：Kasuunfisble | © 2026 Kasuunfisble -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="author" content="bilibili：Kasuunfisble">
+    <meta name="copyright" content="Copyright 2026 Kasuunfisble. All rights reserved.">
+    <title>billiards-chess v1.2 · 作者：bilibili：Kasuunfisble</title>
+    <style>
+        #copyright-notice{position:fixed;left:8px;bottom:6px;z-index:40;font-size:10px;opacity:.58;pointer-events:none}
+        #author-credit{position:fixed;right:8px;bottom:6px;z-index:40;font-size:10px;opacity:.58;pointer-events:none}
+        body{margin:0;overflow:hidden;background:#1a1a2e;display:flex;justify-content:center;align-items:center;height:100vh;height:100dvh;color:#fff;font-family:'Microsoft YaHei',sans-serif;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+        canvas{box-shadow:0 0 30px rgba(0,0,0,.7);cursor:crosshair;border-radius:6px;touch-action:none}
+        #ui{position:absolute;top:20px;left:20px;pointer-events:none;background:rgba(0,0,0,.75);padding:15px 20px;border-radius:8px;backdrop-filter:blur(5px)}
+        h2{margin:0 0 10px;font-size:22px;color:#f1c40f}
+        p{margin:4px 0;font-size:13px;opacity:.9;line-height:1.6}
+        .hl{color:#e74c3c;font-weight:bold;font-size:16px;margin-top:8px}
+        #top-right{position:absolute;top:20px;right:20px;display:flex;flex-direction:column;gap:10px;align-items:flex-end;z-index:20}
+        .panel{background:rgba(0,0,0,.75);backdrop-filter:blur(5px);padding:12px 18px;border-radius:8px;border:2px solid rgba(255,255,255,.2);transition:border-color .2s;touch-action:manipulation}
+        .panel:hover{border-color:rgba(241,196,15,.6)}
+        .panel.clickable{cursor:pointer}
+        .panel.clickable:active{border-color:rgba(241,196,15,.9);transform:scale(.98)}
+        .panel label{font-size:14px;white-space:nowrap;display:block;margin-bottom:6px;pointer-events:none}
+        .panel.clickable label{cursor:pointer;margin-bottom:0}
+        .switch{position:relative;width:44px;height:24px;flex-shrink:0;display:inline-block;vertical-align:middle;pointer-events:none}
+        .switch input{opacity:0;width:0;height:0;position:absolute}
+        .slider{position:absolute;inset:0;background:#555;border-radius:12px;transition:.2s}
+        .slider::before{content:'';position:absolute;height:18px;width:18px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.2s}
+        .switch input:checked+.slider{background:#2ecc71}
+        .switch input:checked+.slider::before{transform:translateX(20px)}
+        .btn-row{display:flex;gap:8px}
+        .game-btn{background:rgba(0,0,0,.75);backdrop-filter:blur(5px);padding:10px 18px;border-radius:8px;cursor:pointer;border:2px solid rgba(255,255,255,.2);color:#fff;font-size:14px;font-family:'Microsoft YaHei',sans-serif;transition:border-color .2s,background .2s,opacity .2s;white-space:nowrap;touch-action:manipulation}
+        .game-btn:hover:not(:disabled){border-color:#e74c3c;background:rgba(231,76,60,.3)}
+        .game-btn:disabled{opacity:.35;cursor:not-allowed;border-color:rgba(255,255,255,.1)}
+        .game-btn.undo-btn:hover:not(:disabled){border-color:#3498db;background:rgba(52,152,219,.3)}
+        #settings-toggle{display:block}
+        #room-status-panel{display:block;box-sizing:border-box;margin-top:8px}
+        #room-status-panel label{color:#f1c40f}
+        #room-status-help{font-size:10px;opacity:.62;line-height:1.45;margin-top:2px}
+        .room-status-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;margin-top:7px;max-height:240px;overflow:auto}
+        .room-status-card{padding:6px 7px;border:1px solid rgba(255,255,255,.14);border-radius:6px;background:rgba(255,255,255,.04);min-width:0}
+        .room-status-card .room-title{display:flex;align-items:center;gap:5px;min-width:0}
+        .room-status-card .room-title strong{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+        .room-status-card .room-state{font-size:9px;opacity:.6;white-space:nowrap}
+        .room-status-card .room-player{display:block;font-size:10px;line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .room-status-card .room-count{display:block;font-size:9px;opacity:.6;margin-top:2px}
+        #room-status-panel .room-status-card.current{border-color:rgba(241,196,15,.7);background:rgba(241,196,15,.08)}
+        #weight-panel{display:none;background:rgba(0,0,0,.35);padding:10px 12px;border-radius:8px;border:1px solid rgba(241,196,15,.3);min-width:0;margin-top:8px}
+        #weight-panel.show{display:block}
+        #weight-panel h3{margin:0 0 10px;font-size:16px;color:#f1c40f}
+        .wrow{display:flex;align-items:center;justify-content:space-between;margin:4px 0}
+        .wrow span{font-size:14px;width:40px}
+        .wrow input[type=number]{width:70px;padding:4px 8px;border-radius:4px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.1);color:#fff;font-size:14px;text-align:center;font-family:'Microsoft YaHei',sans-serif}
+        .wrow input[type=number]:focus{outline:none;border-color:#f1c40f}
+        input[type=range]{-webkit-appearance:none;width:140px;height:6px;border-radius:3px;background:#555;outline:none;margin-top:4px}
+        input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:#f1c40f;cursor:pointer;border:2px solid #fff}
+        input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:#f1c40f;cursor:pointer;border:2px solid #fff}
+        .panel select,.panel input[type=text],.panel input[type=number]{padding:6px 8px;border-radius:5px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.1);color:#fff;font-size:14px;font-family:'Microsoft YaHei',sans-serif;box-sizing:border-box}
+        .panel select option{background:#222;color:#fff}
+        .mode-row,.net-row,.clock-row{display:flex;align-items:center;gap:8px;margin:6px 0}
+        .mode-row .mode-label{font-size:13px;min-width:66px;opacity:.9}
+        .mode-row select{min-width:132px}.mode-row #ai-difficulty{min-width:100px}
+        .computer-options{display:none;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.12)}
+        .computer-options.show{display:block}
+        .ai-thinking-row{display:flex;align-items:center;gap:8px;margin:7px 0}
+        .ai-thinking-row label{font-size:13px;flex:1;margin:0!important;pointer-events:auto!important}
+        .ai-thinking-row input[type=range]{flex:0 0 150px;margin-top:0}
+        .ai-thinking-row .angle-value{min-width:58px;text-align:right}
+        .side-row{display:none;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.12)}
+        .side-row.show{display:flex}
+
+        .net-row input[type=text]{width:170px}
+        .status-dot{width:8px;height:8px;border-radius:50%;display:inline-block;background:#888;flex:0 0 auto}
+        .status-dot.on{background:#2ecc71;box-shadow:0 0 8px rgba(46,204,113,.7)}
+        .status-dot.warn{background:#f1c40f}
+        .status-dot.off{background:#e74c3c}
+        .timer-text{font-weight:bold;font-variant-numeric:tabular-nums;min-width:92px;text-align:center;color:#f1c40f}.timer-text.low{color:#e74c3c;text-shadow:0 0 8px rgba(231,76,60,.45)}
+        .timer-sub{font-size:11px;opacity:.7;margin-top:3px}
+        .disabled-ui{opacity:.45;pointer-events:none}
+        .settings-locked{opacity:.48}
+        .settings-locked input,.settings-locked select,.settings-locked button{cursor:not-allowed}
+        .settings-lock-note{font-size:11px;opacity:.72;line-height:1.5;margin-top:4px}
+        .speed-warning{font-size:11px;color:#f1c40f;line-height:1.5;margin-top:5px}
+        #network-panel,#clock-panel{display:none}
+        #network-panel.show,#clock-panel.show{display:block}
+        #network-panel .game-btn{padding:6px 10px;font-size:12px}
+        .size-label{font-size:12px;opacity:.7;margin-top:2px}
+        .undo-config{display:flex;align-items:center;gap:8px;font-size:13px}
+        .undo-config input{width:50px;padding:4px 8px;border-radius:4px;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.1);color:#fff;font-size:13px;text-align:center;font-family:'Microsoft YaHei',sans-serif}
+        .undo-config input:focus{outline:none;border-color:#3498db}
+
+        #game-clock{position:absolute;top:12px;left:50%;transform:translateX(-50%);display:flex;align-items:center;justify-content:center;gap:12px;min-width:210px;padding:8px 14px;background:rgba(0,0,0,.82);backdrop-filter:blur(8px);border:2px solid rgba(241,196,15,.35);border-radius:999px;box-shadow:0 8px 24px rgba(0,0,0,.28);z-index:25;pointer-events:none;box-sizing:border-box}
+        .game-clock-side{display:flex;align-items:center;gap:6px;min-width:78px;justify-content:center}
+        .game-clock-side .timer-text{min-width:72px;text-align:center;font-size:18px}
+        .game-clock-sep{opacity:.45;font-size:16px}
+        #settings-menu{display:none;position:absolute;top:0;right:0;width:min(390px,calc(100vw - 20px));max-height:min(86vh,760px);overflow:auto;background:rgba(0,0,0,.92);backdrop-filter:blur(14px);padding:14px;border-radius:12px;border:2px solid rgba(241,196,15,.45);box-shadow:0 18px 50px rgba(0,0,0,.5);z-index:30;box-sizing:border-box}
+        #settings-menu.show{display:block}
+        #settings-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+        #settings-head h3{margin:0;color:#f1c40f;font-size:18px}
+        #settings-close{padding:6px 10px}
+        #settings-menu .panel{margin-bottom:8px}
+        #settings-menu .panel:last-child{margin-bottom:0}
+        .knight-pass-options{display:block;margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.12)}
+        .knight-pass-options.hidden{display:none}
+        .knight-range-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+        .knight-range-row label{font-size:13px;white-space:nowrap;flex:1 1 72px}
+        .knight-range-row input[type=range]{flex:1 1 140px;min-width:120px;width:auto;margin-top:0}
+        .knight-range-row .angle-value{min-width:54px;text-align:right;font-size:12px;opacity:.9}
+        .settings-group-title{font-size:14px;color:#f1c40f;margin-bottom:6px}
+        .angle-row{display:flex;align-items:center;gap:8px;margin:7px 0}
+        .angle-row label{flex:1;margin:0!important;pointer-events:auto!important}
+        .angle-row input[type=range]{flex:0 0 150px;margin-top:0}
+        .angle-value{width:58px;text-align:right;font-variant-numeric:tabular-nums;color:#fff}
+        #settings-overlay-click{position:fixed;inset:0;display:none;background:rgba(0,0,0,.22);z-index:10}
+        #settings-overlay-click.show{display:block}
+        .paused-badge{display:none;position:absolute;top:70px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.72);padding:6px 12px;border-radius:999px;color:#f1c40f;font-size:12px;z-index:19;border:1px solid rgba(241,196,15,.35)}
+        .paused-badge.show{display:block}
+
+        .network-lobby{margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.12)}
+        .room-choice-row{display:flex;align-items:center;gap:7px;margin:6px 0;flex-wrap:wrap}
+        .room-choice-row label{font-size:12px;min-width:58px;margin:0!important;pointer-events:auto!important}
+        .room-choice-row select,.room-choice-row input{flex:1;min-width:90px}
+        .room-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;margin-top:7px;max-height:180px;overflow:auto}
+        .room-card{padding:6px 7px;border:1px solid rgba(255,255,255,.14);border-radius:6px;background:rgba(255,255,255,.04);cursor:pointer;min-width:0}
+        .room-card.current{border-color:rgba(241,196,15,.7);background:rgba(241,196,15,.08)}
+        .room-card strong{display:block;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+        .room-card span{display:block;font-size:10px;opacity:.72;margin-top:2px}
+        .room-card small{display:block;font-size:9px;opacity:.58;margin-top:2px}
+        .occupants-list{margin-top:7px;padding-top:7px;border-top:1px solid rgba(255,255,255,.1)}
+        .occupant-row{display:flex;align-items:center;gap:6px;padding:4px 0;font-size:11px}
+        .occupant-row .occ-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+        .occ-role{font-size:10px;opacity:.72;white-space:nowrap}
+        .swap-btn{padding:3px 6px!important;font-size:10px!important}
+        .swap-pending{font-size:10px;color:#f1c40f;margin-top:5px}
+        .spectator-note{font-size:10px;opacity:.72;line-height:1.5;margin-top:5px}
+        .swap-setting-note{font-size:10px;opacity:.72;line-height:1.5;margin-top:2px}
+        .network-joined-actions{display:none;margin-top:7px}
+        .network-joined-actions.show{display:block}
+        .network-join-form.hidden{display:none}
+        /* ===== 手机端 / 小屏适配 ===== */
+        @media (max-width:700px),(max-height:700px){
+            canvas{width:min(100vw,100dvh);height:min(100vw,100dvh)}
+            #ui{top:6px;left:6px;padding:8px 12px;max-width:62vw;pointer-events:auto;cursor:pointer}
+            #ui h2{font-size:15px;margin-bottom:2px}
+            #ui h2::after{content:' ▾';font-size:11px;opacity:.6}
+            #ui.open h2::after{content:' ▴'}
+            #ui p{display:none;font-size:10px;line-height:1.5;margin:2px 0}
+            #ui.open p{display:block}
+            #ui p.hl{display:block;font-size:12px;margin-top:4px}
+            #top-right{top:6px;right:6px;gap:6px}
+            #top-right > .panel{display:none;padding:8px 12px}
+            #top-right > #room-status-panel{display:block;width:calc(100vw - 12px);max-width:calc(100vw - 12px);padding:8px 10px}
+            #top-right.open > .panel{display:block}
+            .game-btn{padding:8px 12px;font-size:12px}
+            #settings-toggle{display:block}
+            #settings-menu{top:0;right:0;left:0;width:calc(100vw - 20px);max-height:calc(100dvh - 20px);margin:10px;border-radius:10px;padding:7px}
+            #settings-menu .panel{padding:8px 10px;margin-bottom:6px}
+            #settings-head{margin-bottom:6px}
+            #settings-head h3{font-size:15px}
+            #settings-head .game-btn{padding:5px 8px;font-size:11px}
+            #settings-menu .panel label,.mode-row .mode-label,.knight-range-row label,.angle-row label,.ai-thinking-row label,.undo-config,.clock-row,.net-row{font-size:12px}
+            #settings-menu .timer-sub{font-size:10px}
+            .angle-row input[type=range]{flex-basis:105px}
+            .knight-range-row input[type=range]{min-width:100px}
+            .ai-thinking-row input[type=range]{flex-basis:105px}
+            .mode-row select,.panel select,.panel input[type=text],.panel input[type=number]{font-size:14px!important;padding:5px 6px}
+            .net-row input[type=text]{width:125px}
+            #settings-menu input[type=range]{width:105px}
+            .room-list{grid-template-columns:repeat(2,minmax(0,1fr));max-height:150px}
+            .room-status-list{grid-template-columns:repeat(2,minmax(0,1fr));max-height:176px}
+            .room-status-card{padding:5px 6px}
+            .room-card{padding:5px 6px}
+            .room-choice-row label{font-size:11px;min-width:50px}
+            .swap-btn{font-size:9px!important;padding:3px 5px!important}
+            #settings-menu .speed-warning{font-size:10px}
+            #settings-menu{scrollbar-width:thin}
+            #weight-panel{top:auto;bottom:auto;right:auto;left:auto;min-width:0}
+            .wrow input[type=number],.undo-config input{font-size:16px}
+            input[type=range]{width:120px}
+            .mode-row select{min-width:116px;font-size:16px}.mode-row #ai-difficulty{min-width:100px}.ai-thinking-row input[type=range]{flex-basis:120px}
+            .net-row input[type=text]{width:145px;font-size:16px}
+            .panel select,.panel input[type=text],.panel input[type=number]{font-size:16px}
+            .timer-text{font-size:16px}
+            #game-clock{top:6px;min-width:170px;gap:8px;padding:6px 10px}
+            .game-clock-side{min-width:64px}.game-clock-side .timer-text{min-width:58px;font-size:15px}
+        }
+        /* ===== 手机竖屏：设置菜单固定居中，避免右侧裁切 ===== */
+        @media (max-width:700px), (max-height:760px){
+            #settings-menu{
+                position:fixed!important;
+                top:8px!important;
+                left:50%!important;
+                right:auto!important;
+                bottom:auto!important;
+                transform:translateX(-50%)!important;
+                width:min(360px,calc(100vw - 12px))!important;
+                max-width:calc(100vw - 12px)!important;
+                max-height:calc(100dvh - 16px)!important;
+                margin:0!important;
+                padding:8px!important;
+                box-sizing:border-box!important;
+                overflow-x:hidden!important;
+                overflow-y:auto!important;
+            }
+            #settings-menu .panel{padding:7px 8px;margin-bottom:6px}
+            #settings-menu .panel label,
+            #settings-menu .mode-label,
+            #settings-menu .knight-range-row label,
+            #settings-menu .angle-row label,
+            #settings-menu .ai-thinking-row label,
+            #settings-menu .undo-config,
+            #settings-menu .clock-row,
+            #settings-menu .net-row,
+            #settings-menu .room-choice-row{font-size:11px}
+            #settings-menu .timer-sub,
+            #settings-menu .swap-setting-note,
+            #settings-menu .spectator-note,
+            #settings-menu #room-status-help{font-size:9px;line-height:1.45}
+            #settings-menu .room-status-list{max-height:150px;overflow-y:auto;overflow-x:hidden}
+            #settings-menu .room-status-card{padding:4px 6px;margin:3px 0;font-size:10px}
+            #settings-menu .room-status-card .room-title{font-size:10px}
+            #settings-menu .room-status-card .room-player,
+            #settings-menu .room-status-card .room-count{font-size:9px}
+            #settings-menu .room-list{max-height:130px;overflow-y:auto;overflow-x:hidden}
+            #settings-menu .room-card{padding:4px 5px;font-size:9px}
+            #settings-menu .room-card strong{font-size:10px}
+            #settings-menu .room-choice-row{gap:5px;flex-wrap:wrap}
+            #settings-menu .room-choice-row label{min-width:42px;font-size:10px}
+            #settings-menu .room-choice-row input[type=text]{min-width:0;max-width:100%;font-size:12px!important}
+            #settings-menu .room-choice-row select{min-width:0;max-width:100%;font-size:12px!important}
+            #settings-menu .net-row input[type=text]{width:100%;font-size:11px!important}
+            #settings-menu .game-btn{padding:5px 8px;font-size:10px}
+            #settings-menu .swap-btn{font-size:8px!important;padding:2px 4px!important}
+            #settings-head h3{font-size:14px}
+            #settings-head .game-btn{padding:4px 7px;font-size:10px}
+            #settings-menu input[type=range]{width:95px}
+            #settings-menu .angle-row input[type=range]{flex-basis:95px}
+            #settings-menu .knight-range-row input[type=range]{min-width:90px}
+            #settings-menu .ai-thinking-row input[type=range]{flex-basis:95px}
+        }
+        @media (max-width:380px){
+            #settings-menu{width:calc(100vw - 8px)!important;max-width:calc(100vw - 8px)!important;top:4px!important;max-height:calc(100dvh - 8px)!important}
+            #settings-menu .room-status-list{max-height:125px}
+            #settings-menu .room-list{max-height:110px}
+            #settings-menu .panel{padding:6px 7px;margin-bottom:5px}
+            #settings-menu .panel label,
+            #settings-menu .mode-label,
+            #settings-menu .knight-range-row label,
+            #settings-menu .angle-row label,
+            #settings-menu .ai-thinking-row label,
+            #settings-menu .undo-config,
+            #settings-menu .clock-row,
+            #settings-menu .net-row,
+            #settings-menu .room-choice-row{font-size:10px}
+            #settings-menu input[type=range]{width:88px}
+        }
+    </style>
+</head>
+<body>
+<div id="copyright-notice">© 2026 Kasuunfisble · billiards-chess v1.2</div>
+<div id="author-credit">作者：bilibili：Kasuunfisble</div>
+<div id="game-clock" aria-label="对战计时">
+    <div class="game-clock-side" id="game-white-side"><span>⚪</span><span id="white-clock" class="timer-text">15:00</span></div>
+    <span class="game-clock-sep">|</span>
+    <div class="game-clock-side" id="game-black-side"><span>⚫</span><span id="black-clock" class="timer-text">15:00</span></div>
+</div>
+<div id="ui">
+    <h2 id="turn-text">⚪ 白方回合</h2>
+    <p>🎯 拖拽蓄力 → 松开击发（整数吸附落格心）</p>
+    <p>♟️ 兵：没有可吃敌子时只能向前；首步可走2格，之后固定1格</p>
+    <p>♟️ 兵侧方±45°有敌可斜向吃子（吃子容差可调）</p>
+    <p>⚔️ 非兵棋子吃子方向容差可调</p>
+    <p>♔♜ 王车易位：王与车均未移动且中间无棋子时，拖动王向车方约2格即可易位</p>
+    <p>🔒 仅本回合击发的己方棋子可吃子</p>
+    <p class="hl" id="msg"></p>
+    <p style="font-size:11px;opacity:.62">作者：bilibili：Kasuunfisble</p>
+</div>
+<div id="top-right">
+    <div class="btn-row">
+        <button class="game-btn" id="restart-btn">🔄 重开</button>
+        <button class="game-btn undo-btn" id="undo-btn" disabled>↩️ 悔棋 (0)</button>
+        <button class="game-btn" id="settings-toggle">⚙️</button>
+    </div>
+    <div id="settings-menu">
+        <div id="settings-head">
+            <h3>⚙️ 游戏设置</h3>
+            <button class="game-btn" id="settings-close">✕ 关闭</button>
+        </div>
+        <div class="settings-lock-note" id="settings-lock-note">开局前可调整规则；首次出手后关键设置锁定，仅动画速度和对战模式可改。</div>
+        <div class="panel" data-critical-setting>
+            <div class="undo-config">
+                <span>↩️ 悔棋上限</span>
+                <input type="number" id="undo-limit" value="3" min="0" max="99" step="1">
+                <span>次</span>
+            </div>
+        </div>
+        <div class="panel">
+            <label>🎮 对战模式</label>
+            <div class="mode-row">
+                <span class="mode-label">模式</span>
+                <select id="game-mode">
+                    <option value="local">本地双人</option>
+                    <option value="computer">电脑对战</option>
+                    <option value="network">联网对战</option>
+                </select>
+            </div>
+            <div class="side-row" id="side-row" data-critical-setting>
+                <span class="mode-label">你的阵营</span>
+                <select id="player-side" title="电脑/联网模式下你的阵营">
+                    <option value="white">白方</option>
+                    <option value="black">黑方</option>
+                </select>
+            </div>
+            <div class="computer-options" id="computer-options" data-critical-setting>
+                <div class="mode-row">
+                    <span class="mode-label">电脑难度</span>
+                    <select id="ai-difficulty" title="电脑难度">
+                        <option value="easy">简单</option>
+                        <option value="normal" selected>普通</option>
+                        <option value="hard">困难</option>
+                        <option value="expert">最高</option>
+                    </select>
+                </div>
+                <div class="ai-thinking-row">
+                    <label for="ai-thinking-time">💭 思考上限</label>
+                    <input type="range" id="ai-thinking-time" min="0.3" max="3.0" step="0.1" value="1.0">
+                    <span class="angle-value" id="ai-thinking-time-label">1.0秒</span>
+                </div>
+                <div class="timer-sub" id="ai-help">普通：战术评分 + 反吃 + 防重复。最高：多层搜索 + 主动性 + 防循环 + 王安全。</div>
+            </div>
+        </div>
+        <div class="panel">
+            <label>🎞️ 动画速度</label>
+            <input type="range" id="speed-slider" min="0.01" max="3.0" step="0.01" value="1.00">
+            <div class="size-label" id="speed-label">1.00×</div>
+            <div class="speed-warning">注意：动画速度过大可能导致物理效果出错！移动端实测约 1.8× ≈ 电脑端 1.0×。</div>
+        </div>
+        <div class="panel" data-critical-setting>
+            <label>♟️ 棋子图标</label>
+            <div class="mode-row">
+                <span class="mode-label">显示</span>
+                <select id="piece-glyph-mode">
+                    <option value="chess" selected>国际象棋棋子图案</option>
+                    <option value="english">英文字母（P/N/B/R/Q/K）</option>
+                    <option value="chinese">汉字（兵/马/象/车/后/王）</option>
+                </select>
+            </div>
+        </div>
+        <div class="panel" id="capture-angle-editor" data-critical-setting>
+            <div class="settings-group-title">🎯 编辑吃子角度</div>
+            <div class="angle-row">
+                <label for="pawn-capture-angle">♟ 兵吃子容差</label>
+                <input type="range" id="pawn-capture-angle" min="0" max="45" step="0.5" value="22.5">
+                <span class="angle-value" id="pawn-capture-angle-label">±22.5°</span>
+            </div>
+            <div class="angle-row">
+                <label for="piece-capture-angle">♜其他棋子容差</label>
+                <input type="range" id="piece-capture-angle" min="0" max="45" step="0.5" value="22.5">
+                <span class="angle-value" id="piece-capture-angle-label">±22.5°</span>
+            </div>
+            <div class="timer-sub">容差越大，允许偏离目标吃子方向的角度越大。</div>
+        </div>
+        <div class="panel" id="clock-panel" data-critical-setting>
+            <label>⏱️ 计时规则</label>
+            <div class="clock-row">
+                <select id="clock-mode">
+                    <option value="total">总时间限制</option>
+                    <option value="move">单步限时</option>
+                </select>
+            </div>
+            <div class="clock-row">
+                <span>设定</span>
+                <input type="number" id="clock-setting" value="15" min="1" max="180" step="0.5" style="width:80px">
+                <span id="clock-setting-unit">分钟/方</span>
+                <button class="game-btn" id="reset-clock-btn">应用</button>
+            </div>
+            <div class="timer-sub" id="clock-help">总时间限制：每方共 15 分钟；走子后切换计时。</div>
+        </div>
+        <div class="panel" id="network-panel">
+            <label>🌐 联网对战</label>
+            <div class="panel" id="room-status-panel">
+                <label>🏠 房间状态</label>
+                <div id="room-status-help">切换到联网对战后显示 1～10 号房间；房间状态每 1.5 秒从本地服务器同步一次，白方、黑方名称和人数会实时更新。</div>
+                <div class="room-status-list" id="room-status-list"></div>
+            </div>
+            <div class="network-join-form" id="network-join-form">
+                <div class="net-row"><input type="text" id="ws-url" value="" placeholder="WebSocket 地址（本地服务器使用 ws://IP:8080）"></div>
+                <div class="timer-sub" id="local-network-hint">本地服务器：本机用 http://127.0.0.1:8080；手机/另一台电脑用 http://服务器局域网IP:8080。联机地址使用 ws://服务器局域网IP:8080，不要使用 https:// 或 wss://。</div>
+                <div class="room-choice-row">
+                    <label for="player-name">昵称</label>
+                    <input type="text" id="player-name" value="玩家" maxlength="16" placeholder="昵称">
+                </div>
+                <div class="room-choice-row">
+                    <label for="room-id">房间</label>
+                    <select id="room-id">
+                        <option value="1">1 号房间</option><option value="2">2 号房间</option><option value="3">3 号房间</option><option value="4">4 号房间</option><option value="5">5 号房间</option>
+                        <option value="6">6 号房间</option><option value="7">7 号房间</option><option value="8">8 号房间</option><option value="9">9 号房间</option><option value="10">10 号房间</option>
+                    </select>
+                    <button class="game-btn" id="network-btn">进入</button>
+                </div>
+                <div class="room-choice-row">
+                    <label for="network-start-role">首位执棋</label>
+                    <select id="network-start-role">
+                        <option value="white">执白</option>
+                        <option value="black">执黑</option>
+                        <option value="random">随机</option>
+                    </select>
+                </div>
+                <div class="timer-sub">第一位进入房间的人可选择开局执白、执黑或随机；已有执棋者后，新进入者自动成为另一方或旁观者。</div>
+                <div class="room-list" id="room-list"></div>
+            </div>
+            <div class="network-joined-actions" id="network-joined-actions">
+                <div class="room-choice-row">
+                    <label for="room-name">房间名</label>
+                    <input type="text" id="room-name" maxlength="24" placeholder="房间名">
+                    <button class="game-btn" id="rename-room-btn">修改</button>
+                </div>
+                <div class="room-choice-row">
+                    <label for="swap-permission">换位权限</label>
+                    <div class="switch"><input type="checkbox" id="swap-permission"><span class="slider"></span></div>
+                    <span id="swap-permission-label" class="angle-value">关闭</span>
+                </div>
+                <div class="swap-setting-note" id="swap-setting-note">换位默认关闭；只有执棋者可以开启或关闭，旁观者不能修改。</div>
+                <div class="room-choice-row">
+                    <button class="game-btn" id="leave-room-btn">退出房间</button>
+                </div>
+                <div class="timer-sub"><span id="net-dot" class="status-dot off"></span> <span id="network-status">未连接</span></div>
+                <div class="occupants-list" id="occupants-list"></div>
+                <div class="swap-pending" id="swap-pending"></div>
+                <div class="spectator-note" id="spectator-note">两位执棋者加入后，后续进入者自动成为旁观者；换位由执棋者控制。</div>
+            </div>
+        </div>
+        <div class="panel" data-critical-setting>
+            <label>📐 棋子大小</label>
+            <input type="range" id="size-slider" min="0.2" max="1.0" step="0.01" value="0.62">
+            <div class="size-label" id="size-label">0.62× (可穿缝)</div>
+        </div>
+        <div class="panel clickable" id="weight-toggle-panel" data-critical-setting>
+            <div style="display:flex;align-items:center;gap:10px">
+                <label>⚖️ 自定义重量</label>
+                <div class="switch"><input type="checkbox" id="weight-mode"><span class="slider"></span></div>
+            </div>
+        </div>
+        <div class="panel clickable" id="knight-toggle-panel" data-critical-setting>
+            <div style="display:flex;align-items:center;gap:10px">
+                <label>🐴 马可穿越己方</label>
+                <div class="switch"><input type="checkbox" id="knight-pass" checked><span class="slider"></span></div>
+            </div>
+            <div id="knight-pass-options" class="knight-pass-options">
+                <div class="knight-range-row">
+                    <label for="knight-pass-radius">避碰范围</label>
+                    <input type="range" id="knight-pass-radius" min="0" max="3" step="0.05" value="1.5">
+                    <span id="knight-pass-radius-label" class="angle-value">1.50格</span>
+                </div>
+                <div class="timer-sub">马移动时，以马为中心此半径内的己方棋子暂时不与马发生碰撞；马停止后恢复。</div>
+            </div>
+        </div>
+        <div class="panel" style="margin-top:8px">
+            <div class="settings-group-title">ℹ️ 作者信息</div>
+            <div class="timer-sub" style="font-size:12px;opacity:.88">bilibili：Kasuunfisble</div>
+            <div class="timer-sub">billiards-chess v1.2 · © 2026 Kasuunfisble. All rights reserved.</div>
+        </div>
+        <div id="weight-panel" data-critical-setting>
+            <h3>⚖️ 棋子重量</h3>
+            <div class="wrow"><span>♟兵</span><input type="number" data-piece="P" value="1" min="0.1" step="0.1"></div>
+            <div class="wrow"><span>♞马</span><input type="number" data-piece="N" value="3" min="0.1" step="0.1"></div>
+            <div class="wrow"><span>♝象</span><input type="number" data-piece="B" value="3" min="0.1" step="0.1"></div>
+            <div class="wrow"><span>♜车</span><input type="number" data-piece="R" value="5" min="0.1" step="0.1"></div>
+            <div class="wrow"><span>♛后</span><input type="number" data-piece="Q" value="9" min="0.1" step="0.1"></div>
+            <div class="wrow"><span>♚王</span><input type="number" data-piece="K" value="15" min="0.1" step="0.1"></div>
+        </div>
+    </div>
+</div>
+<div id="settings-overlay-click"></div>
+<div class="paused-badge" id="paused-badge">⏸️ 设置中，游戏已暂停</div>
+<canvas id="c"></canvas>
+
+<script>
+const C=document.getElementById('c'),X=C.getContext('2d'),CELL=80;
+const BORDER=24,BOARD=CELL*8;
+C.width=C.height=BOARD+BORDER*2;
+
+const FRICTION=0.965,ANG_FRIC=0.92,ELAST=0.82,STOP_V=0.25;
+const CHARGE_PX_PER_CELL=40;
+// 手机端兵：放宽“一格”拖动判定，约 36～84px 都更容易吸附为 1 格
+const PAWN_CHARGE_PX_PER_CELL=60;
+const PAWN_SNAP_EPS=0.40;
+
+const CAL=1.02;
+let CAT=22.5*Math.PI/180;
+const PAWN_SIDE_CENTER=Math.PI/4;
+let PAWN_SIDE_TOL=22.5*Math.PI/180;
+let PAWN_CAP_AIM_TOL=22.5*Math.PI/180;
+const BAR_H=120,BAR_W=16;
+const SNAP_EPS=0.15;
+const MIN_CAPTURE_R=CELL*0.3;
+
+const ORTHO_DIRS=[{x:0,y:-1},{x:0,y:1},{x:-1,y:0},{x:1,y:0}];
+
+const STD_WEIGHT={P:1,N:3,B:3,R:5,Q:9,K:9};
+// 自定义重量默认关闭；一旦打开，王默认重量为 15。
+let customWeight={...STD_WEIGHT,K:15};
+let useCustomWeight=false;
+let pieceRadius=0.62*CELL/2;
+
+let undoStack=[];
+let undoLimit=3;
+
+// ★★★ 核心：数值模拟反推精确初速度 ★★★
+//   完整模拟物理引擎的逐帧减速过程（含STOP_V截断）
+//   二分搜索60次迭代，精度 < 0.001px
+function calcExactV0(targetDist){
+  let lo=0,hi=targetDist*2;
+  for(let i=0;i<60;i++){
+    const mid=(lo+hi)/2;
+    let pos=0,vel=mid;
+    while(vel>STOP_V){pos+=vel;vel*=FRICTION;}
+    if(pos<targetDist)lo=mid;else hi=mid;
+  }
+  return(lo+hi)/2;
+}
+
+// ★ 预计算固定力度棋子的精确常量
+const PW_EXACT={
+  pawn1:  calcExactV0(CELL),
+  pawn2:  calcExactV0(2*CELL),
+  capDiag:calcExactV0(Math.hypot(CELL,CELL)),
+  knight: calcExactV0(Math.hypot(CELL,CELL*2)),
+  king1:  calcExactV0(CELL),
+};
+
+// ★ 滑动棋子力度缓存：避免每帧重复二分搜索
+//   key格式: "orth_3" / "diag_5" 等
+//   最多缓存 8+8=16 个条目，内存开销可忽略
+const _v0Cache=new Map();
+function getCachedV0(unitDist,cells){
+  const key=`${unitDist.toFixed(4)}_${cells}`;
+  let v=_v0Cache.get(key);
+  if(v===undefined){v=calcExactV0(cells*unitDist);_v0Cache.set(key,v);}
+  return v;
+}
+
+// 向后兼容PW对象
+const PW={
+  pwOrth:PW_EXACT.pawn1, // 仅作为fallback，实际滑动棋子走缓存
+  pwDiag:calcExactV0(Math.SQRT2*CELL),
+  pwN:PW_EXACT.knight,
+  pwK:PW_EXACT.king1,
+  pwP:PW_EXACT.pawn1,
+  pwP1:PW_EXACT.pawn2,
+  pwCap:PW_EXACT.capDiag,
+};
+
+const CFG_TEMPLATE={
+  'P':{n:'兵',fix:1,mc:0,d:[[0,-1,1]],cap:null},
+  'R':{n:'车',fix:0,mc:8,d:[[0,-1,1],[0,1,1],[-1,0,1],[1,0,1]],cap:null},
+  'N':{n:'马',fix:1,mc:0,d:[[-1,-2,Math.SQRT5],[1,-2,Math.SQRT5],[-2,-1,Math.SQRT5],[2,-1,Math.SQRT5],[-2,1,Math.SQRT5],[2,1,Math.SQRT5],[-1,2,Math.SQRT5],[1,2,Math.SQRT5]],cap:null},
+  'B':{n:'象',fix:0,mc:8,d:[[-1,-1,Math.SQRT2],[1,-1,Math.SQRT2],[-1,1,Math.SQRT2],[1,1,Math.SQRT2]],cap:null},
+  'Q':{n:'后',fix:0,mc:8,d:[[0,-1,1],[0,1,1],[-1,0,1],[1,0,1],[-1,-1,Math.SQRT2],[1,-1,Math.SQRT2],[-1,1,Math.SQRT2],[1,1,Math.SQRT2]],cap:null},
+  'K':{n:'王',fix:1,mc:0,d:[[0,-1,1],[0,1,1],[-1,0,1],[1,0,1]],cap:null},
+};
+for(const[k,v]of Object.entries({...CFG_TEMPLATE}))CFG_TEMPLATE[k.toLowerCase()]={...v,n:v.n};
+
+function buildCfg(){
+  const cfg={};
+  for(const[k,t]of Object.entries(CFG_TEMPLATE)){
+    const u=k.toUpperCase();
+    if(t.fix){if(u==='P'){cfg[k]={...t,pw:PW.pwP,pw1:PW.pwP1};continue;}if(u==='N'){cfg[k]={...t,pw:PW.pwN};continue;}if(u==='K'){cfg[k]={...t,pw:PW.pwK};continue;}}
+    else{if(u==='R'){cfg[k]={...t,unitDist:CELL};continue;}if(u==='B'){cfg[k]={...t,unitDist:Math.SQRT2*CELL};continue;}if(u==='Q'){cfg[k]={...t,unitDist:null};continue;}}
+    cfg[k]={...t,unitDist:null};
+  }
+  return cfg;
+}
+let CFG=buildCfg();
+
+let pieces=[],turn='white',over=false,sel=null,dragging=false,dragCur={x:0,y:0},hasMoved=false,activePlayer='white';
+let gameMode='local',playerSide='white',animationSpeed=1.0,aiDifficulty='normal',aiThinkTimeMs=1000;
+let gameStarted=false;
+let pieceGlyphMode='chess';
+let clockEnabled=true,clockMode='total',totalTimeMs=15*60*1000,moveTimeMs=30*1000,timeRemaining={white:15*60*1000,black:15*60*1000};
+let clockRunning=false,lastClockTick=performance.now(),aiTimer=null,aiActionTimer=null,aiThinkToken=0,aiThinking=false;
+let aiMoveHistory=[];
+let aiStagnationCount=0;
+let socket=null,networkConnected=false,networkRoom='',remoteReady=false,applyingRemote=false;
+let networkAssignedRole='';
+let lobbySocket=null;
+let lobbyConnecting=false;
+let settingsOpen=false;
+const kpEl=document.getElementById('knight-pass');
+const wmEl=document.getElementById('weight-mode');
+const wpEl=document.getElementById('weight-panel');
+const ssEl=document.getElementById('size-slider');
+const slEl=document.getElementById('size-label');
+const undoBtn=document.getElementById('undo-btn');
+const undoLimitEl=document.getElementById('undo-limit');
+const modeEl=document.getElementById('game-mode');
+const sideEl=document.getElementById('player-side');
+const sideRowEl=document.getElementById('side-row');
+const computerOptionsEl=document.getElementById('computer-options');
+const aiDifficultyEl=document.getElementById('ai-difficulty');
+const aiThinkEl=document.getElementById('ai-thinking-time');
+const aiThinkLabelEl=document.getElementById('ai-thinking-time-label');
+const aiHelpEl=document.getElementById('ai-help');
+const speedEl=document.getElementById('speed-slider');
+const speedLabelEl=document.getElementById('speed-label');
+const pieceGlyphModeEl=document.getElementById('piece-glyph-mode');
+const settingsLockNoteEl=document.getElementById('settings-lock-note');
+const clockPanelEl=document.getElementById('clock-panel');
+const networkPanelEl=document.getElementById('network-panel');
+const whiteClockEl=document.getElementById('white-clock');
+const blackClockEl=document.getElementById('black-clock');
+const clockModeEl=document.getElementById('clock-mode');
+const clockSettingEl=document.getElementById('clock-setting');
+const clockSettingUnitEl=document.getElementById('clock-setting-unit');
+const clockHelpEl=document.getElementById('clock-help');
+const resetClockBtn=document.getElementById('reset-clock-btn');
+const wsUrlEl=document.getElementById('ws-url');
+const roomIdEl=document.getElementById('room-id');
+const networkBtn=document.getElementById('network-btn');
+const networkStatusEl=document.getElementById('network-status');
+const netDotEl=document.getElementById('net-dot');
+const settingsMenuEl=document.getElementById('settings-menu');
+const settingsCloseEl=document.getElementById('settings-close');
+const settingsOverlayEl=document.getElementById('settings-overlay-click');
+const pausedBadgeEl=document.getElementById('paused-badge');
+const pawnCaptureAngleEl=document.getElementById('pawn-capture-angle');
+const pawnCaptureAngleLabelEl=document.getElementById('pawn-capture-angle-label');
+const pieceCaptureAngleEl=document.getElementById('piece-capture-angle');
+const pieceCaptureAngleLabelEl=document.getElementById('piece-capture-angle-label');
+const knightPassOptionsEl=document.getElementById('knight-pass-options');
+const knightPassRadiusEl=document.getElementById('knight-pass-radius');
+const knightPassRadiusLabelEl=document.getElementById('knight-pass-radius-label');
+let knightPassRadiusCells=1.5;
+
+function saveSnapshot(){
+  return JSON.stringify({
+    pieces:pieces.map(p=>({id:p.id,x:p.x,y:p.y,vx:p.vx,vy:p.vy,a:p.a,av:p.av,t:p.t,col:p.col,moved:p.moved,alive:p.alive,tgt:p.tgt?{x:p.tgt.x,y:p.tgt.y}:null,moveStart:p.moveStart?{x:p.moveStart.x,y:p.moveStart.y}:null,knightIgnoreIds:p.knightIgnoreIds?[...p.knightIgnoreIds]:[]})),
+    turn,activePlayer,over,hasMoved,gameStarted,timeRemaining,clockRunning,clockMode,totalTimeMs,moveTimeMs,knightPassRadiusCells
+  });
+}
+function restoreSnapshot(json,fromRemote=false){
+  // 恢复棋盘前先取消正在等待/执行的电脑回合，避免旧 AI 结果回写到新局面。
+  cancelAIThinking();
+  aiMoveHistory=[];
+  aiStagnationCount=0;
+  const s=JSON.parse(json);
+  pieces=s.pieces.map(d=>{const p=new P(d.x,d.y,d.t,d.id);p.vx=d.vx;p.vy=d.vy;p.a=d.a;p.av=d.av;p.col=d.col;p.moved=d.moved;p.alive=d.alive;p.tgt=d.tgt?{x:d.tgt.x,y:d.tgt.y}:null;p.moveStart=d.moveStart?{x:d.moveStart.x,y:d.moveStart.y}:null;p.prevX=Number.isFinite(d.prevX)?d.prevX:p.x;p.prevY=Number.isFinite(d.prevY)?d.prevY:p.y;p.knightIgnoreIds=new Set(Array.isArray(d.knightIgnoreIds)?d.knightIgnoreIds:[]);p.knightPassActive=!!(p.isKnight&&p.isMoving&&kpEl.checked&&p.knightIgnoreIds.size>0);return p;});
+  turn=s.turn;activePlayer=s.activePlayer;over=s.over;hasMoved=s.hasMoved;
+  gameStarted=typeof s.gameStarted==='boolean'?s.gameStarted:hasMoved;
+  if(s.clockMode)clockMode=s.clockMode;
+  if(Number.isFinite(s.totalTimeMs))totalTimeMs=s.totalTimeMs;
+  if(Number.isFinite(s.moveTimeMs))moveTimeMs=s.moveTimeMs;
+  if(s.timeRemaining)timeRemaining={white:s.timeRemaining.white,black:s.timeRemaining.black};
+  if(Number.isFinite(s.knightPassRadiusCells)){knightPassRadiusCells=Math.max(0,Math.min(3,s.knightPassRadiusCells));knightPassRadiusEl.value=String(knightPassRadiusCells);knightPassRadiusLabelEl.textContent=`${knightPassRadiusCells.toFixed(2).replace(/\.00$/,'').replace(/(\.\d)0$/,'$1')}格`;}
+  sel=null;dragging=false;
+  // 远端状态恢复只在本次 restoreSnapshot 内生效；
+  // 不能让 applyingRemote 长期保持 true，否则下一位执棋者的 shot 会被拦截。
+  applyingRemote=false;
+  updateTurnText();
+  document.getElementById('msg').innerText=over?`👑 ${activePlayer==='white'?'白方':'黑方'} 获胜！`:'';
+  updateUndoUI();updateClockConfigUI(true);updateClockUI();applySettingsLockUI();
+  clockRunning=typeof s.clockRunning==='boolean'?s.clockRunning:(!over&&hasMoved);
+  lastClockTick=performance.now();
+}
+function pushUndo(){if(undoLimit<=0)return;undoStack.push(saveSnapshot());while(undoStack.length>undoLimit)undoStack.shift();updateUndoUI();}
+function cancelAIThinking(){
+  if(aiTimer){clearTimeout(aiTimer);aiTimer=null;}
+  if(aiActionTimer){clearTimeout(aiActionTimer);aiActionTimer=null;}
+  aiThinkToken++;
+  aiThinking=false;
+  aiSearchDeadline=0;
+}
+function doUndo(){
+  if(undoStack.length===0)return;
+  cancelAIThinking();
+  const snapshot=undoStack.pop();
+  restoreSnapshot(snapshot);
+  updateUndoUI();
+  // 电脑回合悔棋：恢复到电脑出手前的局面后，自动重新开始一次新的思考。
+  if(gameMode==='computer'&&turn!==(playerSide||'white')&&!over){
+    document.getElementById('msg').innerText='🤖 悔棋后重新思考…';
+    scheduleAI();
+  }
+}
+function updateUndoUI(){undoBtn.textContent=`↩️ 悔棋 (${undoStack.length})`;undoBtn.disabled=undoStack.length===0;}
+undoLimitEl.addEventListener('input',()=>{if(isCriticalSettingsLocked())return;undoLimit=Math.max(0,Math.min(99,parseInt(undoLimitEl.value)||0));while(undoStack.length>undoLimit)undoStack.shift();updateUndoUI();});
+undoBtn.addEventListener('click',doUndo);
+
+function toCanvas(x,y){return{x:x+BORDER,y:y+BORDER};}
+function toBoard(cx,cy){return{x:cx-BORDER,y:cy-BORDER};}
+function softSnap(v,maxCells){const c=Math.max(0,Math.min(maxCells,v)),r=Math.round(c);return Math.abs(c-r)<=SNAP_EPS?r:c;}
+function getWeight(t){const u=t.toUpperCase();return useCustomWeight?customWeight[u]:STD_WEIGHT[u];}
+function pieceFontSize(r){return Math.max(10,Math.min(28,r*1.4));}
+function captureR(){return Math.max(pieceRadius,MIN_CAPTURE_R);}
+
+const GLYPH_CHESS_WHITE={P:'♙',N:'♘',B:'♗',R:'♖',Q:'♕',K:'♔'};
+const GLYPH_CHESS_BLACK={P:'♟',N:'♞',B:'♝',R:'♜',Q:'♛',K:'♚'};
+const GLYPH_EN={P:'P',N:'N',B:'B',R:'R',Q:'Q',K:'K'};
+const GLYPH_CN={P:'兵',N:'马',B:'象',R:'车',Q:'后',K:'王'};
+function getPieceGlyph(t){
+  const u=t.toUpperCase();
+  if(pieceGlyphMode==='english')return GLYPH_EN[u]||u;
+  if(pieceGlyphMode==='chinese')return GLYPH_CN[u]||u;
+  return t===t.toUpperCase()?(GLYPH_CHESS_WHITE[u]||u):(GLYPH_CHESS_BLACK[u]||u);
+}
+
+class P{
+  constructor(x,y,t,id=null){
+    this.id=id||('p'+(++pieceIdSeq));
+    this.x=x;this.y=y;this.vx=0;this.vy=0;
+    this.a=t===t.toUpperCase()?-Math.PI/2:Math.PI/2;
+    this.av=0;this.t=t;this.c=CFG[t];
+    this.col=t===t.toUpperCase()?'white':'black';
+    this.alive=true;this.tgt=null;this.moved=false;this.moveStart=null;
+    this.prevX=x;this.prevY=y;
+    this.knightPassActive=false;
+    this.knightIgnoreIds=new Set();
+    this.castleActive=false;
+  }
+  get r(){return pieceRadius;}
+  get cr(){return captureR();}
+  get mass(){return getWeight(this.t);}
+  get isMoving(){return Math.hypot(this.vx,this.vy)>STOP_V||Math.abs(this.av)>0.01||!!this.tgt;}
+  get isKnight(){return this.t==='N'||this.t==='n';}
+  get isPawn(){return this.t==='P'||this.t==='p';}
+  update(stepScale=1){
+    if(!this.alive)return;
+    if(this.tgt){
+      this.prevX=this.x;this.prevY=this.y;
+      const dx=this.tgt.x-this.x,dy=this.tgt.y-this.y,d=Math.hypot(dx,dy);
+      const ease=1-Math.pow(1-0.18,stepScale);
+      if(d<2||ease>=1){this.x=this.tgt.x;this.y=this.tgt.y;this.vx=0;this.vy=0;this.av=0;this.tgt=null;this.moveStart=null;this.knightPassActive=false;this.knightIgnoreIds=new Set();this.castleActive=false;}
+      else{this.x+=dx*ease;this.y+=dy*ease;}
+      return;
+    }
+    this.prevX=this.x;this.prevY=this.y;
+    this.x+=this.vx*stepScale;this.y+=this.vy*stepScale;this.a+=this.av*stepScale;
+    const fr=Math.pow(FRICTION,stepScale),afr=Math.pow(ANG_FRIC,stepScale);
+    this.vx*=fr;this.vy*=fr;this.av*=afr;
+    const rr=this.r;
+    if(this.x<rr){this.x=rr;this.vx*=-ELAST;}if(this.x>BOARD-rr){this.x=BOARD-rr;this.vx*=-ELAST;}
+    if(this.y<rr){this.y=rr;this.vy*=-ELAST;}if(this.y>BOARD-rr){this.y=BOARD-rr;this.vy*=-ELAST;}
+    if(!this.isMoving){this.vx=0;this.vy=0;this.av=0;this.moveStart=null;this.knightPassActive=false;this.knightIgnoreIds=new Set();this.castleActive=false;}
+  }
+  draw(){
+    if(!this.alive)return;
+    const cp=toCanvas(this.x,this.y),rr=this.r;
+    if(sel===this){X.beginPath();X.arc(cp.x,cp.y,rr+6,0,Math.PI*2);X.strokeStyle='#f1c40f';X.lineWidth=3;X.stroke();}
+    X.beginPath();X.arc(cp.x,cp.y,rr,0,Math.PI*2);X.fillStyle=this.col==='white'?'#ecf0f1':'#2c3e50';X.fill();X.lineWidth=2;X.strokeStyle=this.col==='white'?'#bdc3c7':'#000';X.stroke();
+    // 方向箭头：三角形底边的两个顶点严格落在棋子圆周上，尖端置于圆外；
+    // 仅用于视觉提示，不参与任何碰撞、吃子或移动判定。
+    const arrowHalfAngle=24*Math.PI/180;
+    const baseR=rr;
+    const baseX=baseR*Math.cos(arrowHalfAngle);
+    const baseY=baseR*Math.sin(arrowHalfAngle);
+    const tipX=rr+Math.max(7,rr*0.42);
+    X.save();X.translate(cp.x,cp.y);X.rotate(this.a);
+    X.beginPath();
+    X.moveTo(baseX,-baseY);
+    X.lineTo(tipX,0);
+    X.lineTo(baseX,baseY);
+    X.closePath();
+    X.fillStyle='#e74c3c';X.fill();
+    X.restore();
+    const fs=pieceFontSize(rr);
+    X.fillStyle=this.col==='white'?'#2c3e50':'#ecf0f1';X.font=`bold ${fs}px Microsoft YaHei`;X.textAlign='center';X.textBaseline='middle';
+    X.fillText(getPieceGlyph(this.t),cp.x,cp.y);
+  }
+  worldDirs(dirs){const c=Math.cos(this.a),s=Math.sin(this.a);return dirs.map(([lx,ly,dist])=>{const wx=-lx*s-ly*c,wy=lx*c-ly*s,l=Math.hypot(wx,wy);return{x:wx/l,y:wy/l,dist};});}
+  captureDirs(){return this.c.cap?this.worldDirs(this.c.cap):this.worldDirs(this.c.d);}
+  isInSideAttackZone(wx,wy){
+    const dx=wx-this.x,dy=wy-this.y;if(Math.hypot(dx,dy)===0)return false;
+    const cosA=Math.cos(this.a),sinA=Math.sin(this.a);
+    const lx=dx*cosA+dy*sinA,ly=-dx*sinA+dy*cosA;
+    const abs=Math.abs(Math.atan2(ly,lx));
+    return abs>=(PAWN_SIDE_CENTER-PAWN_SIDE_TOL)&&abs<=(PAWN_SIDE_CENTER+PAWN_SIDE_TOL);
+  }
+  getForwardWorldDir(){return this.worldDirs([[0,-1,1]])[0];}
+  getSideWorldDirs(){return[{x:Math.cos(this.a+PAWN_SIDE_CENTER),y:Math.sin(this.a+PAWN_SIDE_CENTER)},{x:Math.cos(this.a-PAWN_SIDE_CENTER),y:Math.sin(this.a-PAWN_SIDE_CENTER)}];}
+}
+
+let pieceIdSeq=0;
+function initPieces(){
+  pieces=[];pieceIdSeq=0;
+  const L=['rnbqkbnr','pppppppp','        ','        ','        ','        ','PPPPPPPP','RNBQKBNR'];
+  for(let r=0;r<8;r++)for(let c=0;c<8;c++)if(L[r][c]!==' ')pieces.push(new P(c*CELL+CELL/2,r*CELL+CELL/2,L[r][c]));
+}
+function isCriticalSettingsLocked(){return gameStarted;}
+function applySettingsLockUI(){
+  const locked=gameStarted;
+  document.querySelectorAll('[data-critical-setting]').forEach(box=>{
+    box.classList.toggle('settings-locked',locked);
+    box.querySelectorAll('input,select,button').forEach(el=>{
+      el.disabled=locked;
+    });
+  });
+  if(settingsLockNoteEl){
+    settingsLockNoteEl.textContent=locked
+      ? '🔒 本局已开始：关键设置已锁定，仅动画速度与对战模式可修改。修改对战模式会自动重开。'
+      : '本局尚未开始：可调整全部设置。首次出手后关键设置将锁定。';
+  }
+}
+
+function restartGame(){
+  cancelAIThinking();
+  aiMoveHistory=[];
+  aiStagnationCount=0;
+  dragging=false;sel=null;initPieces();
+  turn='white';activePlayer='white';over=false;hasMoved=false;gameStarted=false;
+  undoStack=[];_v0Cache.clear();
+  const initialClock=clockMode==='total'?totalTimeMs:moveTimeMs;
+  clockRunning=false;lastClockTick=performance.now();
+  timeRemaining={white:initialClock,black:initialClock};
+  updateTurnText();document.getElementById('msg').innerText='';
+  updateUndoUI();updateClockUI();updateModeUI(false);applySettingsLockUI();
+  if(gameMode==='network'&&networkConnected)sendNetwork({type:'restart',room:networkRoom,state:saveSnapshot()});
+  if(gameMode==='computer'&&turn!==playerSide)scheduleAI();
+}
+document.getElementById('restart-btn').addEventListener('click',restartGame);
+document.getElementById('weight-toggle-panel').addEventListener('click',()=>{if(isCriticalSettingsLocked())return;wmEl.checked=!wmEl.checked;wmEl.dispatchEvent(new Event('change'));});
+document.getElementById('knight-toggle-panel').addEventListener('click',e=>{
+  if(isCriticalSettingsLocked())return;
+  if(e.target===knightPassRadiusEl||e.target.closest('#knight-pass-options'))return;
+  kpEl.checked=!kpEl.checked;
+  updateKnightPassUI();
+  // 开关只影响下一次马出手；已经开始的马步不在移动过程中重新计算免碰撞名单。
+});
+function updateKnightPassUI(){
+  knightPassOptionsEl.classList.toggle('hidden',!kpEl.checked);
+  const v=Math.max(0,Math.min(3,Number(knightPassRadiusEl.value)||0));
+  knightPassRadiusCells=v;
+  knightPassRadiusLabelEl.textContent=`${v.toFixed(2).replace(/\.00$/,'').replace(/(\.\d)0$/,'$1')}格`;
+}
+knightPassRadiusEl.addEventListener('input',()=>{if(isCriticalSettingsLocked())return;
+  knightPassRadiusCells=Math.max(0,Math.min(3,Number(knightPassRadiusEl.value)||0));
+  knightPassRadiusLabelEl.textContent=`${knightPassRadiusCells.toFixed(2).replace(/\.00$/,'').replace(/(\.\d)0$/,'$1')}格`;
+});
+
+function updateKnightPassRadiusHelp(){
+  const physicalBoundary=(pieceRadius*2/CELL).toFixed(2);
+  const v=knightPassRadiusCells.toFixed(2);
+  const mode=v < physicalBoundary ? '低于棋子物理碰撞边界，仍可能发生实际碰撞' : '高于棋子物理碰撞边界，可完整屏蔽进入范围的己方棋子';
+  const help=document.getElementById('knight-pass-radius-help');
+  if(help)help.textContent=`当前 ${v}格；物理碰撞边界约 ${physicalBoundary}格。${mode}`;
+}
+updateKnightPassRadiusHelp();
+ssEl.addEventListener('input',updateKnightPassRadiusHelp);
+
+ssEl.addEventListener('input',()=>{if(isCriticalSettingsLocked())return;
+  const v=parseFloat(ssEl.value);pieceRadius=v*CELL/2;
+  let tag=`${v.toFixed(2)}×`;
+  if(Math.abs(v-0.62)<0.015)tag+=' (可穿透)';else if(Math.abs(v-1)<0.015)tag+=' (满格)';else if(Math.abs(v-0.2)<0.015)tag+=' (最小)';
+  slEl.textContent=tag;
+});
+wmEl.addEventListener('change',()=>{if(isCriticalSettingsLocked())return;useCustomWeight=wmEl.checked;wpEl.classList.toggle('show',useCustomWeight);});
+wpEl.querySelectorAll('input[data-piece]').forEach(inp=>inp.addEventListener('input',()=>{const k=inp.dataset.piece,v=parseFloat(inp.value);if(v>0)customWeight[k]=v;}));
+
+function setAngleLabel(el,labelEl,degrees){
+  const v=Math.max(0,Math.min(45,Number(degrees)||0));
+  labelEl.textContent=`±${v.toFixed(1).replace(/\.0$/,'')}°`;
+}
+function updateCaptureAngleUI(){
+  const pawnDeg=PAWN_SIDE_TOL*180/Math.PI;
+  const pieceDeg=CAT*180/Math.PI;
+  pawnCaptureAngleEl.value=pawnDeg.toFixed(1);
+  pieceCaptureAngleEl.value=pieceDeg.toFixed(1);
+  setAngleLabel(pawnCaptureAngleEl,pawnCaptureAngleLabelEl,pawnDeg);
+  setAngleLabel(pieceCaptureAngleEl,pieceCaptureAngleLabelEl,pieceDeg);
+}
+function setSettingsOpen(open){
+  settingsOpen=!!open;
+  applySettingsLockUI();
+  settingsMenuEl.classList.toggle('show',settingsOpen);
+  settingsOverlayEl.classList.toggle('show',settingsOpen);
+  pausedBadgeEl.classList.toggle('show',settingsOpen);
+  dragging=false;sel=null;
+  if(settingsOpen){
+    if(aiTimer){clearTimeout(aiTimer);aiTimer=null;}
+    lastClockTick=performance.now();
+  }else{
+    lastClockTick=performance.now();
+    if(gameMode==='computer'&&turn!==(playerSide||'white')&&!over&&!anyMoving())scheduleAI();
+  }
+}
+function toggleSettings(){setSettingsOpen(!settingsOpen);}
+function refreshNetworkUiLock(){
+  const locked=gameStarted;
+  [playerNameEl,roomIdEl,networkStartRoleEl,wsUrlEl,networkBtn].forEach(el=>{if(el)el.disabled=locked||networkConnected;});
+  if(leaveRoomBtn)leaveRoomBtn.disabled=gameStarted===true&&networkConnected&&false;
+  if(renameRoomBtn)renameRoomBtn.disabled=!networkConnected;
+}
+
+
+// ===== 模式 / 动画速度 / 计时 =====
+function updateTurnText(){
+  document.getElementById('turn-text').innerText=`${turn==='white'?'⚪':'⚫'} ${turn==='white'?'白方':'黑方'}回合`;
+}
+function formatClock(ms){
+  const s=Math.max(0,Math.ceil(ms/1000)),m=Math.floor(s/60),r=s%60;
+  return `${String(m).padStart(2,'0')}:${String(r).padStart(2,'0')}`;
+}
+function updateClockConfigUI(writeInput=true){
+  if(writeInput&&clockModeEl.value)clockMode=clockModeEl.value;
+  clockModeEl.value=clockMode;
+  if(clockMode==='total'){
+    clockSettingEl.min='1';clockSettingEl.max='180';clockSettingEl.step='0.5';
+    clockSettingUnitEl.textContent='分钟/方';
+    if(writeInput)clockSettingEl.value=(totalTimeMs/60000).toString().replace(/\.0$/,'');
+    clockHelpEl.textContent=`总时间限制：每方共 ${formatClock(totalTimeMs)}；走子后切换计时。`;
+  }else{
+    clockSettingEl.min='5';clockSettingEl.max='600';clockSettingEl.step='5';
+    clockSettingUnitEl.textContent='秒/步';
+    if(writeInput)clockSettingEl.value=String(Math.round(moveTimeMs/1000));
+    clockHelpEl.textContent=`单步限时：当前一方每一步最多 ${formatClock(moveTimeMs)}，换回合后重新计时。`;
+  }
+}
+function updateClockUI(){
+  whiteClockEl.textContent=formatClock(timeRemaining.white);
+  blackClockEl.textContent=formatClock(timeRemaining.black);
+  whiteClockEl.style.opacity=turn==='white'?'1':'.65';
+  blackClockEl.style.opacity=turn==='black'?'1':'.65';
+  whiteClockEl.style.fontWeight=turn==='white'?'bold':'normal';
+  blackClockEl.style.fontWeight=turn==='black'?'bold':'normal';
+  document.getElementById('game-white-side').style.opacity=turn==='white'?'1':'.72';
+  document.getElementById('game-black-side').style.opacity=turn==='black'?'1':'.72';
+  whiteClockEl.classList.toggle('low',timeRemaining.white<=10000);
+  blackClockEl.classList.toggle('low',timeRemaining.black<=10000);
+}
+function resetClock(applyOnly=false){
+  const n=Math.max(clockMode==='total'?1:5,Math.min(clockMode==='total'?180:600,parseFloat(clockSettingEl.value)||(clockMode==='total'?15:30)));
+  if(clockMode==='total')totalTimeMs=n*60*1000;
+  else moveTimeMs=n*1000;
+  const initial=clockMode==='total'?totalTimeMs:moveTimeMs;
+  timeRemaining={white:initial,black:initial};
+  clockRunning=false;lastClockTick=performance.now();
+  updateClockConfigUI(true);updateClockUI();
+  if(!applyOnly&&gameMode==='network'&&networkConnected&&!applyingRemote)sendNetwork({type:'state',room:networkRoom,state:saveSnapshot()});
+}
+function tickClock(now){
+  if(!clockEnabled||!clockRunning||over||settingsOpen){lastClockTick=now;return;}
+  const dt=Math.max(0,Math.min(1000,now-lastClockTick));lastClockTick=now;
+  timeRemaining[turn]=Math.max(0,timeRemaining[turn]-dt);
+  if(timeRemaining[turn]<=0){
+    over=true;clockRunning=false;
+    activePlayer=turn==='white'?'black':'white';
+    document.getElementById('msg').innerText=`⏱️ ${turn==='white'?'白方':'黑方'}${clockMode==='move'?'单步':'总时间'}超时，${activePlayer==='white'?'白方':'黑方'} 获胜！`;
+    updateUndoUI();
+    if(gameMode==='network'&&!applyingRemote)sendNetwork({type:'timeout',room:networkRoom,state:saveSnapshot()});
+  }
+  updateClockUI();
+}
+function updateModeUI(shouldRestart=true){
+  gameMode=modeEl.value;playerSide=sideEl.value;aiDifficulty=aiDifficultyEl.value;
+  const isNet=gameMode==='network';
+  const isSpecial=gameMode!=='local';
+  const isComputer=gameMode==='computer';
+  sideRowEl.classList.toggle('show',isSpecial);
+  computerOptionsEl.classList.toggle('show',isComputer);
+  aiHelpEl.style.display=isComputer?'block':'none';
+  clockPanelEl.classList.add('show');
+  networkPanelEl.classList.toggle('show',isNet);
+  networkPanelEl.style.display=isNet?'block':'none';
+  if(isNet){
+    connectLobbyObserver();
+  }else{
+    closeLobbyObserver();
+  }
+  updateClockConfigUI(true);
+  if(isNet){netDotEl.className=`status-dot ${networkConnected?'on':'off'}`;networkStatusEl.textContent=networkConnected?`已连接 · ${networkRoomName||networkRoom||'未命名房间'}`:'未连接';}
+  aiDifficultyEl.value=aiDifficulty;
+  aiHelpEl.textContent=aiDifficulty==='easy'?'简单：会保留随机失误。':aiDifficulty==='hard'?'困难：加入敌方最佳回应、主动性与防重复。':aiDifficulty==='expert'?'最高：多层搜索、主动性、王安全、防循环与反击评估。':'普通：战术评分 + 反吃 + 防重复。';
+  if(shouldRestart)restartGame();
+  refreshNetworkUiLock();
+}
+speedEl.addEventListener('input',()=>{
+  const raw=parseFloat(speedEl.value)||1.5;
+  const snapped=raw<=0.01?0.01:(raw>=3?3:Math.round(raw/0.05)*0.05);
+  animationSpeed=Math.max(0.01,Math.min(3,Number(snapped.toFixed(2))));
+  speedEl.value=animationSpeed.toFixed(2);
+  speedLabelEl.textContent=`${animationSpeed.toFixed(2)}×`;
+});
+pieceGlyphModeEl.addEventListener('change',()=>{
+  if(isCriticalSettingsLocked()){pieceGlyphModeEl.value=pieceGlyphMode;return;}
+  pieceGlyphMode=pieceGlyphModeEl.value||'chess';
+});
+pawnCaptureAngleEl.addEventListener('input',()=>{if(isCriticalSettingsLocked())return;
+  const v=Math.max(0,Math.min(45,parseFloat(pawnCaptureAngleEl.value)||0));
+  PAWN_SIDE_TOL=v*Math.PI/180;
+  PAWN_CAP_AIM_TOL=v*Math.PI/180;
+  setAngleLabel(pawnCaptureAngleEl,pawnCaptureAngleLabelEl,v);
+});
+pieceCaptureAngleEl.addEventListener('input',()=>{if(isCriticalSettingsLocked())return;
+  const v=Math.max(0,Math.min(45,parseFloat(pieceCaptureAngleEl.value)||0));
+  CAT=v*Math.PI/180;
+  setAngleLabel(pieceCaptureAngleEl,pieceCaptureAngleLabelEl,v);
+});
+clockModeEl.addEventListener('change',()=>{if(isCriticalSettingsLocked())return;clockMode=clockModeEl.value;resetClock(false);});
+clockSettingEl.addEventListener('change',()=>{if(!isCriticalSettingsLocked())resetClock(false);});
+resetClockBtn.addEventListener('click',()=>{if(!isCriticalSettingsLocked())resetClock(false);});
+modeEl.addEventListener('change',updateModeUI);
+sideEl.addEventListener('change',()=>{if(isCriticalSettingsLocked())return;playerSide=sideEl.value;restartGame();});
+aiDifficultyEl.addEventListener('change',()=>{if(isCriticalSettingsLocked())return;aiDifficulty=aiDifficultyEl.value;restartGame();});
+aiThinkEl.addEventListener('input',()=>{if(isCriticalSettingsLocked())return;
+  aiThinkTimeMs=Math.round(Math.max(300,Math.min(3000,parseFloat(aiThinkEl.value)||1))*1000);
+  aiThinkLabelEl.textContent=`${(aiThinkTimeMs/1000).toFixed(1)}秒`;
+});
+
+// ===== 联网：WebSocket 房间大厅 / 旁观 / 换位协议 =====
+function defaultWsUrl(){
+  // v1.2 本地 Node 服务器是 HTTP + WebSocket，不提供 TLS。
+  // 因此局域网必须使用 http://IP:8080 + ws://IP:8080，不能使用 https://。
+  if(location.protocol==='http:'){
+    const port=location.port==='8000'?'8080':(location.port||'8080');
+    return `ws://${location.hostname}:${port}`;
+  }
+  // 正式 HTTPS 部署（例如带 TLS 的云服务）才使用 WSS。
+  if(location.protocol==='https:')return `wss://${location.host}`;
+  return 'ws://localhost:8080';
+}
+if(!wsUrlEl.value)wsUrlEl.value=defaultWsUrl();
+
+let networkClientId='';
+let networkRoleMode='spectator';
+let networkRoomName='';
+let networkParticipants=[];
+let networkPendingRequestId='';
+let networkSwapEnabled=false;
+let networkSwapControlledByPlayer=false;
+let networkRoomList=[];
+let lobbyReconnectTimer=null;
+let roomPollTimer=null;
+let roomFetchInFlight=false;
+const playerNameEl=document.getElementById('player-name');
+const networkStartRoleEl=document.getElementById('network-start-role');
+const roomListEl=document.getElementById('room-list');
+const roomStatusListEl=document.getElementById('room-status-list');
+const roomStatusHelpEl=document.getElementById('room-status-help');
+const networkJoinFormEl=document.getElementById('network-join-form');
+const networkJoinedActionsEl=document.getElementById('network-joined-actions');
+const roomNameEl=document.getElementById('room-name');
+const renameRoomBtn=document.getElementById('rename-room-btn');
+const leaveRoomBtn=document.getElementById('leave-room-btn');
+const occupantsListEl=document.getElementById('occupants-list');
+const swapPendingEl=document.getElementById('swap-pending');
+const spectatorNoteEl=document.getElementById('spectator-note');
+const swapPermissionEl=document.getElementById('swap-permission');
+const swapPermissionLabelEl=document.getElementById('swap-permission-label');
+const swapSettingNoteEl=document.getElementById('swap-setting-note');
+
+function escapeHtml(v){
+  return String(v).replace(/[&<>'"]/g,ch=>({
+    '&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'
+  }[ch]));
+}
+function setNetworkStatus(textValue,on=false,warn=false){
+  networkStatusEl.textContent=textValue;
+  netDotEl.className=`status-dot ${on?'on':(warn?'warn':'off')}`;
+}
+function sendNetwork(obj){
+  if(socket&&socket.readyState===WebSocket.OPEN)socket.send(JSON.stringify(obj));
+}
+function renderRoomStatusList(rooms){
+  if(!roomStatusListEl)return;
+  roomStatusListEl.innerHTML='';
+  const list=Array.isArray(rooms)?rooms:[];
+  if(!list.length){
+    roomStatusListEl.textContent='暂未取得服务器房间列表';
+    return;
+  }
+  for(const r of list){
+    const card=document.createElement('div');
+    card.className='room-status-card'+(String(r.id)===String(networkRoom)?' current':'');
+    const full=Number(r.count||0)>=Number(r.capacity||10);
+    const whiteName=String(r.whiteName||'').trim()||'空位';
+    const blackName=String(r.blackName||'').trim()||'空位';
+    const playerText=`${r.players||0}/2 执棋 · ${r.spectators||0}/${Math.max(0,(r.capacity||10)-2)} 旁观`;
+    const swapText=r.swapEnabled?'换位开':'换位关';
+    card.innerHTML=`<div class="room-title"><strong>${escapeHtml(r.name||`房间 ${r.id}`)}</strong><span class="room-state">${full?'已满':swapText}</span></div><span class="room-player">⚪ 白方：${escapeHtml(whiteName)}</span><span class="room-player">⚫ 黑方：${escapeHtml(blackName)}</span><span class="room-count">${playerText}</span>`;
+    roomStatusListEl.appendChild(card);
+  }
+}
+function renderRoomList(rooms){
+  networkRoomList=Array.isArray(rooms)?rooms:[];
+  window.__roomList=networkRoomList;
+  renderRoomStatusList(networkRoomList);
+  if(!roomListEl)return;
+  roomListEl.innerHTML='';
+  for(const r of networkRoomList){
+    const card=document.createElement('div');
+    card.className='room-card'+(String(r.id)===String(networkRoom)?' current':'');
+    const full=Number(r.count||0)>=Number(r.capacity||10);
+    const playerText=`${r.players||0}/2 执棋 · ${r.spectators||0}/${Math.max(0,(r.capacity||10)-2)} 旁观 · 换位${r.swapEnabled?'开':'关'}`;
+    const whiteName=String(r.whiteName||'').trim()||'空位';
+    const blackName=String(r.blackName||'').trim()||'空位';
+    card.innerHTML=`<strong>${escapeHtml(r.name||`房间 ${r.id}`)}</strong><span>⚪ ${escapeHtml(whiteName)} · ⚫ ${escapeHtml(blackName)}</span><span>${playerText}</span><small>${r.id} 号房间${full?' · 已满':''}</small>`;
+    card.addEventListener('click',()=>{
+      if(gameStarted||networkConnected)return;
+      roomIdEl.value=String(r.id);
+      updateStartRoleAvailability(r);
+    });
+    roomListEl.appendChild(card);
+  }
+}
+function getDefaultWebSocketUrl(){
+  if(location.protocol==='http:'){
+    const port=location.port||'8080';
+    return `ws://${location.hostname}:${port}`;
+  }
+  if(location.protocol==='https:')return `wss://${location.host}`;
+  return '';
+}
+function getRoomsApiUrl(){
+  if(location.protocol==='file:')return '';
+  return `${location.origin}/rooms`;
+}
+function ensureDefaultWebSocketUrl(){
+  if(!wsUrlEl.value.trim()){
+    const url=getDefaultWebSocketUrl();
+    if(url)wsUrlEl.value=url;
+  }
+}
+function setRoomStatusHelp(textValue){
+  if(roomStatusHelpEl)roomStatusHelpEl.textContent=textValue;
+}
+async function fetchRoomStatus(){
+  const url=getRoomsApiUrl();
+  if(!url){
+    setRoomStatusHelp('本地文件模式：未连接游戏服务器，房间状态暂不可用。');
+    return;
+  }
+  if(roomFetchInFlight)return;
+  roomFetchInFlight=true;
+  try{
+    const res=await fetch(url,{cache:'no-store'});
+    if(!res.ok)throw new Error(`HTTP ${res.status}`);
+    const data=await res.json();
+    renderRoomList(data.rooms||[]);
+    networkSwapEnabled=networkConnected?networkSwapEnabled:false;
+    refreshSelectedRoomUI();
+    setRoomStatusHelp(`房间服务器已连接 · HTTP大厅正常更新 · ${new Date().toLocaleTimeString()}`);
+  }catch(e){
+    const detail=e&&e.message?`（${e.message}）`:'';
+    setRoomStatusHelp(`房间服务器未连接${detail} · 正在自动重试；请确认当前页面来自 http://服务器IP:8080`);
+  }finally{
+    roomFetchInFlight=false;
+  }
+}
+function stopRoomStatusPolling(){
+  if(roomPollTimer){clearInterval(roomPollTimer);roomPollTimer=null;}
+}
+function startRoomStatusPolling(){
+  stopRoomStatusPolling();
+  fetchRoomStatus();
+  roomPollTimer=setInterval(fetchRoomStatus,1500);
+}
+// 保留旧函数名供现有调用路径使用，但实际采用 HTTP /rooms 轮询，不再额外占用一个大厅 WebSocket。
+function closeLobbyObserver(){
+  stopRoomStatusPolling();
+  lobbyConnecting=false;
+  if(lobbyReconnectTimer){clearTimeout(lobbyReconnectTimer);lobbyReconnectTimer=null;}
+}
+function scheduleLobbyReconnect(){
+  if(lobbyReconnectTimer||gameMode!=='network')return;
+  lobbyReconnectTimer=setTimeout(()=>{
+    lobbyReconnectTimer=null;
+    startRoomStatusPolling();
+  },1500);
+}
+function connectLobbyObserver(){
+  if(location.protocol==='file:'){
+    setRoomStatusHelp('本地文件模式：未连接游戏服务器，房间状态暂不可用。');
+    return;
+  }
+  startRoomStatusPolling();
+}
+function updateStartRoleAvailability(roomInfo){
+  const players=Number(roomInfo?.players||0);
+  const count=Number(roomInfo?.count||0);
+  const full=count>=Number(roomInfo?.capacity||10);
+  networkStartRoleEl.disabled=gameStarted||networkConnected||players>0||full;
+  if(players===0&&!full)networkStartRoleEl.title='首位进入房间者可以选择执白、执黑或随机。';
+  else if(players===1)networkStartRoleEl.title='该房间已有一名执棋者，你进入后自动获得另一方。';
+  else networkStartRoleEl.title='该房间已有两名执棋者，你进入后自动成为旁观者。';
+}
+function refreshSelectedRoomUI(){
+  const current=networkRoomList.find(r=>String(r.id)===String(roomIdEl.value));
+  if(current)updateStartRoleAvailability(current);
+}
+function updateSwapPermissionUI(){
+  const isPlayer=networkRoleMode==='player'&&!!networkAssignedRole;
+  swapPermissionEl.checked=!!networkSwapEnabled;
+  swapPermissionEl.disabled=!networkConnected||!isPlayer;
+  swapPermissionLabelEl.textContent=networkSwapEnabled?'开启':'关闭';
+  swapPermissionLabelEl.style.opacity=networkSwapEnabled?'1':'.72';
+  swapSettingNoteEl.textContent=isPlayer
+    ? '换位默认关闭；你可以代表当前执棋席位开启/关闭房间换位。'
+    : '换位权限由白方或黑方执棋者设置；旁观者不能修改。';
+}
+function renderParticipants(list){
+  networkParticipants=Array.isArray(list)?list:[];
+  occupantsListEl.innerHTML='';
+  if(!networkParticipants.length){occupantsListEl.textContent='房间内暂无其他玩家';return;}
+  for(const u of networkParticipants){
+    const row=document.createElement('div');
+    row.className='occupant-row';
+    const roleText=u.role==='white'?'⚪ 白方':u.role==='black'?'⚫ 黑方':'👁 旁观';
+    const mine=u.id===networkClientId;
+    row.innerHTML=`<span class="occ-name">${escapeHtml(u.name||'玩家')}${mine?'（你）':''}</span><span class="occ-role">${roleText}</span>`;
+    if(!mine&&u.role&&networkSwapEnabled){
+      const btn=document.createElement('button');
+      btn.className='game-btn swap-btn';
+      btn.textContent='请求换位';
+      btn.disabled=!networkConnected;
+      btn.addEventListener('click',()=>requestSwap(u.id));
+      row.appendChild(btn);
+    }
+    occupantsListEl.appendChild(row);
+  }
+}
+function updateNetworkRoleUI(message=''){
+  const isPlayer=networkRoleMode==='player'&&!!networkAssignedRole;
+  const roleText=isPlayer?(networkAssignedRole==='white'?'白方':'黑方'):'旁观者';
+  setNetworkStatus(`已连接 · ${networkRoomName||networkRoom} · ${roleText}`,true);
+  spectatorNoteEl.textContent=isPlayer
+    ? (networkSwapEnabled ? '你当前执棋；房间换位已开启，可以向其他参与者发出换位请求，也可以接受请求。' : '你当前执棋；房间换位目前关闭，你可以使用“换位权限”开关决定是否允许换位。')
+    : (networkSwapEnabled ? '你当前为旁观者；房间换位已由执棋者开启。' : '你当前为旁观者；换位默认关闭，只有执棋者可以开启。');
+  updateSwapPermissionUI();
+  if(message)swapPendingEl.textContent=message;
+}
+function requestSwap(targetId){
+  if(!networkConnected||!networkSwapEnabled||!targetId)return;
+  sendNetwork({type:'swap-request',room:networkRoom,targetId});
+}
+function disconnectNetwork(resetRoomUi=true){
+  remoteReady=false;networkConnected=false;networkAssignedRole='';networkClientId='';networkRoleMode='spectator';networkParticipants=[];networkPendingRequestId='';networkSwapEnabled=false;networkSwapControlledByPlayer=false;
+  if(socket){try{socket.close();}catch(e){}socket=null;}
+  setNetworkStatus('未连接');
+  networkBtn.textContent='进入';
+  networkJoinFormEl.classList.remove('hidden');
+  networkJoinedActionsEl.classList.remove('show');
+  swapPendingEl.textContent='';occupantsListEl.innerHTML='';
+  if(resetRoomUi){roomNameEl.value='';networkRoomName='';}
+  refreshSelectedRoomUI();
+}
+function leaveNetworkRoom(){
+  if(!networkConnected){
+    disconnectNetwork(true);
+    networkRoom='';
+    roomIdEl.value='1';
+    networkStartRoleEl.disabled=false;
+    connectLobbyObserver();
+    return;
+  }
+  const leftRoom=String(networkRoom||'');
+  const leftRole=networkAssignedRole;
+  const leftName=(playerNameEl.value.trim()||'玩家').slice(0,16);
+  // 先在当前页面把自己的席位立即显示为空，随后由 lobby observer 从服务器取得权威状态。
+  if(leftRoom){
+    const local=networkRoomList.map(r=>{
+      if(String(r.id)!==leftRoom)return r;
+      const copy={...r};
+      copy.count=Math.max(0,Number(copy.count||0)-1);
+      copy.players=Math.max(0,Number(copy.players||0)-(leftRole?1:0));
+      copy.spectators=Math.max(0,Number(copy.spectators||0)-(!leftRole?1:0));
+      if(leftRole==='white')copy.whiteName='';
+      if(leftRole==='black')copy.blackName='';
+      return copy;
+    });
+    renderRoomList(local);
+  }
+  if(socket){try{socket.close();}catch(e){}}
+  disconnectNetwork(true);
+  networkRoom='';
+  roomIdEl.value='1';
+  networkStartRoleEl.disabled=false;
+  connectLobbyObserver();
+}
+function connectNetwork(){
+  if(gameStarted&&!networkConnected)return;
+  ensureDefaultWebSocketUrl();
+  const url=wsUrlEl.value.trim();
+  const room=String(roomIdEl.value||'1');
+  const startRole=networkStartRoleEl.value||'white';
+  const name=(playerNameEl.value.trim()||'玩家').slice(0,16);
+  if(!url){setNetworkStatus('请输入 WebSocket 地址',false,true);return;}
+  if(location.protocol==='http:' && !/^ws:\/\//i.test(url)){
+    setNetworkStatus('本地服务器必须使用 ws:// 地址；不要填写 wss://',false,true);
+    return;
+  }
+  closeLobbyObserver();
+  disconnectNetwork(false);
+  networkRoom=room;
+  setNetworkStatus('连接中…',false,true);
+  try{socket=new WebSocket(url);}catch(e){setNetworkStatus('地址无效',false,false);return;}
+  socket.addEventListener('open',()=>{
+    networkConnected=true;remoteReady=false;networkBtn.textContent='已进入';
+    setNetworkStatus(`已连接 · ${networkRoom} · 正在进入房间…`,true);
+    sendNetwork({type:'join',room,requestedRole:startRole,name,version:'1.2'});
+  });
+  socket.addEventListener('message',ev=>{
+    let msg;try{msg=JSON.parse(ev.data);}catch(e){return;}
+    if(msg.room&&msg.room!==networkRoom)return;
+    if(msg.type==='room-list'){
+      renderRoomList(msg.rooms||[]);
+      refreshSelectedRoomUI();
+      return;
+    }
+    if(msg.type==='joined'){
+      remoteReady=true;
+      networkClientId=msg.clientId||'';
+      networkAssignedRole=msg.role||'';
+      networkRoleMode=msg.mode||((msg.role)?'player':'spectator');
+      networkSwapEnabled=msg.swapEnabled===true;
+      playerSide=networkAssignedRole||playerSide;
+      networkSwapControlledByPlayer=networkRoleMode==='player';
+      if(networkAssignedRole)sideEl.value=networkAssignedRole;
+      // joined 即代表 WebSocket 已进入房间；棋子操作直接依据服务器分配的 role 判断。
+      networkRoomName=msg.roomName||`房间 ${networkRoom}`;
+      roomNameEl.value=networkRoomName;
+      networkJoinFormEl.classList.add('hidden');
+      networkJoinedActionsEl.classList.add('show');
+      renderParticipants(msg.participants||[]);
+      updateNetworkRoleUI(msg.host?'你是房主':''+(msg.canChooseStartRole?' · 你可设定初始执棋':''));
+      if(msg.state)restoreSnapshot(msg.state,true);
+      return;
+    }
+    if(msg.type==='peer-joined'){
+      remoteReady=true;
+      updateNetworkRoleUI(`房间人数 ${msg.count||0}/10`);
+      // 服务端会直接向房主发送 request-state，并带上新玩家 requesterId。
+      // 这里不能再次发送 request-state，否则请求会绕回房主自己。
+      return;
+    }
+    if(msg.type==='request-state'){
+      // 服务端明确要求当前客户端提供状态，通常是房主。
+      if(msg.requesterId){
+        sendNetwork({type:'state',room:networkRoom,state:saveSnapshot(),to:msg.requesterId});
+      }else{
+        sendNetwork({type:'state',room:networkRoom,state:saveSnapshot()});
+      }
+      return;
+    }
+    if(msg.type==='room-update'){
+      networkRoomName=msg.roomName||networkRoomName;
+      roomNameEl.value=networkRoomName;
+      networkSwapEnabled=msg.swapEnabled===true;
+      networkSwapControlledByPlayer=networkRoleMode==='player';
+      renderParticipants(msg.participants||[]);
+      if(msg.state&&typeof msg.state==='string'&&!gameStarted)restoreSnapshot(msg.state,true);
+      updateNetworkRoleUI();
+      return;
+    }
+    if(msg.type==='room-renamed'){
+      networkRoomName=msg.roomName||networkRoomName;
+      roomNameEl.value=networkRoomName;
+      return;
+    }
+    if(msg.type==='state'&&msg.state){
+      remoteReady=true;
+      restoreSnapshot(msg.state,true);
+      return;
+    }
+    if(msg.type==='shot'){remoteReady=true;applyNetworkShot(msg);return;}
+    if(msg.type==='castle'){remoteReady=true;applyNetworkCastle(msg);return;}
+    if(msg.type==='restart'&&msg.state){restoreSnapshot(msg.state,true);return;}
+    if(msg.type==='timeout'&&msg.state){restoreSnapshot(msg.state,true);return;}
+    if(msg.type==='swap-state'){
+      networkSwapEnabled=msg.enabled===true;
+      renderParticipants(msg.participants||networkParticipants);
+      updateNetworkRoleUI(msg.message||`换位已${networkSwapEnabled?'开启':'关闭'}`);
+      return;
+    }
+    if(msg.type==='swap-offer'){
+      networkPendingRequestId=msg.requestId||'';
+      swapPendingEl.innerHTML='';
+      const wrap=document.createElement('span');
+      wrap.textContent=`${msg.fromName||'对方'}（${msg.fromRole==='white'?'白方':msg.fromRole==='black'?'黑方':'旁观者'}）请求与你换位： `;
+      const accept=document.createElement('button');accept.className='game-btn swap-btn';accept.textContent='接受';
+      const reject=document.createElement('button');reject.className='game-btn swap-btn';reject.textContent='拒绝';
+      accept.addEventListener('click',()=>{sendNetwork({type:'swap-response',requestId:networkPendingRequestId,accept:true});swapPendingEl.textContent='已接受换位请求。';});
+      reject.addEventListener('click',()=>{sendNetwork({type:'swap-response',requestId:networkPendingRequestId,accept:false});swapPendingEl.textContent='已拒绝换位请求。';});
+      swapPendingEl.appendChild(wrap);swapPendingEl.appendChild(accept);swapPendingEl.appendChild(reject);
+      return;
+    }
+    if(msg.type==='swap-pending'){
+      networkPendingRequestId=msg.requestId||'';
+      swapPendingEl.textContent='换位请求已发送，等待对方处理…';
+      return;
+    }
+    if(msg.type==='swap-result'){
+      if(msg.ok){
+        networkAssignedRole=msg.role||'';
+        networkRoleMode=msg.mode||((msg.role)?'player':'spectator');
+        if(networkAssignedRole){playerSide=networkAssignedRole;sideEl.value=networkAssignedRole;}
+        networkPendingRequestId='';
+        updateNetworkRoleUI(msg.message||'换位成功');
+      }else{
+        networkPendingRequestId='';swapPendingEl.textContent=msg.message||'换位未成功';
+      }
+      return;
+    }
+    if(msg.type==='role-changed'){
+      if(msg.clientId===networkClientId){
+        networkAssignedRole=msg.role||'';
+        networkRoleMode=msg.mode||((msg.role)?'player':'spectator');
+        playerSide=networkAssignedRole||playerSide;
+        if(networkAssignedRole)sideEl.value=networkAssignedRole;
+        swapPendingEl.textContent=msg.message||'';
+      }
+      renderParticipants(msg.participants||[]);
+      updateNetworkRoleUI();
+      return;
+    }
+    if(msg.type==='peer-left'){
+      renderParticipants(msg.participants||[]);
+      if(msg.promotedClientId===networkClientId){
+        networkAssignedRole=msg.promotedRole||'';
+        networkRoleMode='player';
+        playerSide=networkAssignedRole;
+        sideEl.value=networkAssignedRole;
+        swapPendingEl.textContent='执棋者离开，你已自动接替执棋席位。';
+      }
+      updateNetworkRoleUI();
+      return;
+    }
+    if(msg.type==='swap-disabled'){
+      networkSwapEnabled=false;
+      swapPendingEl.textContent=msg.message||'本房间已关闭换位请求';
+      updateSwapPermissionUI();
+      renderParticipants(networkParticipants);
+      return;
+    }
+    if(msg.type==='room-full'||msg.type==='error'){
+      setNetworkStatus(msg.message||'房间不可用',false,true);
+      return;
+    }
+  });
+  socket.addEventListener('close',()=>{
+    networkConnected=false;remoteReady=false;networkAssignedRole='';networkRoleMode='spectator';networkClientId='';networkParticipants=[];networkSwapEnabled=false;networkSwapControlledByPlayer=false;networkBtn.textContent='进入';setNetworkStatus('连接已断开');networkJoinFormEl.classList.remove('hidden');networkJoinedActionsEl.classList.remove('show');
+    updateSwapPermissionUI();
+    refreshSelectedRoomUI();
+    if(!networkConnected)connectLobbyObserver();
+  });
+  socket.addEventListener('error',()=>setNetworkStatus('连接失败，请检查地址或中继服务',false,false));
+}
+networkBtn.addEventListener('click',()=>{if(!networkConnected)connectNetwork();});
+roomIdEl.addEventListener('change',()=>{if(!networkConnected)refreshSelectedRoomUI();});
+swapPermissionEl.addEventListener('change',()=>{
+  const isPlayer=networkRoleMode==='player'&&!!networkAssignedRole;
+  if(!networkConnected||!isPlayer){updateSwapPermissionUI();return;}
+  sendNetwork({type:'set-swap-enabled',room:networkRoom,enabled:swapPermissionEl.checked});
+});
+leaveRoomBtn.addEventListener('click',leaveNetworkRoom);
+renameRoomBtn.addEventListener('click',()=>{
+  if(!networkConnected)return;
+  const name=(roomNameEl.value.trim()||`房间 ${networkRoom}`).slice(0,24);
+  sendNetwork({type:'rename-room',room:networkRoom,name});
+});
+
+// ===== 设置目录 =====
+document.getElementById('settings-toggle').addEventListener('click',toggleSettings);
+settingsCloseEl.addEventListener('click',()=>setSettingsOpen(false));
+settingsOverlayEl.addEventListener('click',()=>setSettingsOpen(false));
+settingsMenuEl.addEventListener('pointerdown',e=>e.stopPropagation());
+
+function anyMoving(){return pieces.some(p=>p.alive&&p.isMoving);}
+function canLocalControl(){
+  if(gameMode==='local')return true;
+  if(gameMode==='computer')return turn===playerSide&&!over;
+  if(gameMode==='network'){
+    // 联机操作以服务器分配的执棋身份为准；不再依赖 remoteReady，
+    // 避免状态同步标志短暂变化导致“已连接但棋子不能拖动”。
+    const role=networkAssignedRole;
+    return networkConnected&&networkRoleMode==='player'&&!!role&&turn===role&&!over;
+  }
+  return true;
+}
+let aiSearchDeadline=0;
+function aiSearchExpired(){return aiSearchDeadline>0&&performance.now()>=aiSearchDeadline;}
+function scheduleAI(){
+  if(aiTimer)clearTimeout(aiTimer);
+  if(aiActionTimer)clearTimeout(aiActionTimer);
+  aiTimer=null;aiActionTimer=null;
+  if(gameMode!=='computer'||over||turn!==(playerSide==='white'?'black':'white')){
+    aiThinking=false;
+    return;
+  }
+  const aiSide=playerSide==='white'?'black':'white';
+  const delay=aiDifficulty==='expert'?650:aiDifficulty==='hard'?500:aiDifficulty==='easy'?220:350;
+  const token=++aiThinkToken;
+  aiThinking=true;
+  // 等待时间与动画速度完全解耦；动画慢/快不会改变电脑实际思考上限。
+  aiTimer=setTimeout(()=>{
+    if(token!==aiThinkToken)return;
+    aiTimer=null;
+    if(settingsOpen){
+      aiThinking=false;
+      scheduleAI();
+      return;
+    }
+    document.getElementById('msg').innerText='🤖 电脑思考中…';
+    aiActionTimer=setTimeout(()=>{
+      aiActionTimer=null;
+      if(token!==aiThinkToken)return;
+      aiThinking=false;
+      performAITurn(aiSide,token);
+    },20);
+  },delay);
+}
+const AI_VALUE={P:100,N:320,B:330,R:500,Q:900,K:20000};
+const AI_DIFFICULTY_CFG={
+  easy:{noise:45,rootBeam:8,replyBeam:0,repeatPenalty:260,reversePenalty:180,stagnationWeight:0.35},
+  normal:{noise:7,rootBeam:20,replyBeam:0,repeatPenalty:650,reversePenalty:420,stagnationWeight:0.75},
+  hard:{noise:1.5,rootBeam:16,replyBeam:4,repeatPenalty:900,reversePenalty:650,stagnationWeight:1.0},
+  expert:{noise:0.15,rootBeam:16,replyBeam:8,repeatPenalty:1200,reversePenalty:900,stagnationWeight:1.25}
+};
+function aiPieceValue(p){return AI_VALUE[p.t.toUpperCase()]||100;}
+function aiOpp(col){return col==='white'?'black':'white';}
+function aiDistPoint(ax,ay,bx,by){return Math.hypot(bx-ax,by-ay);}
+function aiDirectionFrom(p,tx,ty){
+  const dx=tx-p.x,dy=ty-p.y,dist=Math.hypot(dx,dy);
+  if(dist<1)return null;
+  return {dx,dy,dist,cx:dx/dist,cy:dy/dist};
+}
+function aiTargetAtFrom(p,fromX,fromY,tx,ty){
+  const q=aiDirectionFrom({x:fromX,y:fromY},tx,ty);
+  if(!q)return false;
+  if(p.isPawn){
+    const cosA=Math.cos(p.a),sinA=Math.sin(p.a);
+    const lx=q.dx*cosA+q.dy*sinA,ly=-q.dx*sinA+q.dy*cosA;
+    const abs=Math.abs(Math.atan2(ly,lx));
+    return abs>=(PAWN_SIDE_CENTER-PAWN_SIDE_TOL)&&abs<=(PAWN_SIDE_CENTER+PAWN_SIDE_TOL)&&q.dist<=Math.hypot(CELL,CELL)+p.cr+captureR();
+  }
+  for(const d of p.captureDirs()){
+    const dot=q.cx*d.x+q.cy*d.y;
+    if(dot>=Math.cos(CAT)&&q.dist<=aiMaxMoveDistance(p,d)+p.cr+captureR())return true;
+  }
+  return false;
+}
+function aiTargetAt(p,x,y){return aiTargetAtFrom(p,p.x,p.y,x,y);}
+function aiMaxMoveDistance(p,dir){
+  if(p.c.fix)return dir.dist*CELL;
+  const unit=p.c.unitDist===null?dir.dist*CELL:p.c.unitDist;
+  return p.c.mc*unit;
+}
+function aiPathCapture(p,dir,moveDist){
+  if(p.isPawn)return null;
+  const enemies=pieces.filter(q=>q.alive&&q.col!==p.col).sort((a,b)=>aiDistPoint(p.x,p.y,a.x,a.y)-aiDistPoint(p.x,p.y,b.x,b.y));
+  let best=null,bestProj=Infinity;
+  for(const e of enemies){
+    if(aiSearchExpired())break;
+    const dx=e.x-p.x,dy=e.y-p.y,proj=dx*dir.x+dy*dir.y;
+    const lateral=Math.abs(dx*dir.y-dy*dir.x);
+    const capReach=p.cr+e.cr+3;
+    if(proj>=-capReach&&proj<=moveDist+capReach&&proj>0&&lateral<=capReach){
+      const dist=Math.hypot(dx,dy);
+      if(dist>0){
+        const dot=(dx/dist)*dir.x+(dy/dist)*dir.y;
+        if(dot>=Math.cos(CAT)&&proj<bestProj){best=e;bestProj=proj;}
+      }
+    }
+  }
+  return best;
+}
+function aiFriendlyOnPath(p,dir,moveDist){
+  if(kpEl.checked&&p.isKnight)return 0;
+  let count=0;
+  for(const q of pieces){
+    if(!q.alive||q.col!==p.col||q===p)continue;
+    const dx=q.x-p.x,dy=q.y-p.y,proj=dx*dir.x+dy*dir.y,lateral=Math.abs(dx*dir.y-dy*dir.x);
+    if(proj>0&&proj<moveDist&&lateral<=p.r+q.r+3)count++;
+  }
+  return count;
+}
+function aiLineBlockedByFriendly(p,dir,moveDist){return aiFriendlyOnPath(p,dir,moveDist)>0&&! (kpEl.checked&&p.isKnight);}
+function aiThreatsAt(col,x,y,ignorePiece=null){
+  return pieces.filter(p=>p.alive&&p.col===col&&p!==ignorePiece&&aiTargetAt(p,x,y)).map(aiPieceValue).sort((a,b)=>b-a);
+}
+function aiBestCaptureValueAt(col,x,y,ignorePiece=null){
+  const vals=aiThreatsAt(col,x,y,ignorePiece);
+  return vals.length?vals[0]:0;
+}
+function aiAttackValueFrom(p,fromX,fromY,enemyCol){
+  let best=0;
+  for(const e of pieces){
+    if(!e.alive||e.col!==enemyCol)continue;
+    if(aiTargetAtFrom(p,fromX,fromY,e.x,e.y))best=Math.max(best,aiPieceValue(e));
+  }
+  return best;
+}
+function aiIsKingThreatened(col,kingX,kingY,ignorePiece=null){
+  return pieces.some(p=>p.alive&&p.col!==col&&p!==ignorePiece&&aiTargetAt(p,kingX,kingY));
+}
+function aiFindCandidates(col){
+  const out=[];
+  const myPieces=pieces.filter(p=>p.alive&&p.col===col);
+  for(const p of myPieces){
+    if(aiSearchExpired())break;
+    if(p.isPawn){
+      const f=p.getForwardWorldDir();
+      const maxCells=p.moved?1:2;
+      for(let cells=1;cells<=maxCells;cells++){
+        if(aiSearchExpired())break;
+        const dist=cells*CELL;
+        if(cells>1&&aiFriendlyOnPath(p,f,dist)>0)continue;
+        const ex=p.x+f.x*dist,ey=p.y+f.y*dist;
+        const v0=cells===2?PW.pwP1:PW.pwP;
+        out.push({p,dir:f,cells,vx:f.x*v0,vy:f.y*v0,dist,ex,ey,target:null});
+      }
+      for(const sd of p.getSideWorldDirs()){
+        if(aiSearchExpired())break;
+        const tx=p.x+sd.x*Math.hypot(CELL,CELL),ty=p.y+sd.y*Math.hypot(CELL,CELL);
+        const enemy=pieces.find(q=>q.alive&&q.col!==col&&Math.hypot(q.x-tx,q.y-ty)<p.cr+q.cr+8);
+        if(enemy)out.push({p,dir:sd,cells:1,vx:sd.x*PW.pwCap,vy:sd.y*PW.pwCap,dist:Math.hypot(CELL,CELL),ex:enemy.x,ey:enemy.y,target:enemy,capture:true});
+      }
+    }else{
+      if(p.t.toUpperCase()==='K'){
+        for(const opt of getCastleOptions(p)){
+          if(aiSearchExpired())break;
+          out.push({p,dir:{x:opt.side==='king'?1:-1,y:0,dist:2},cells:2,vx:0,vy:0,dist:2*CELL,ex:opt.kingTarget.x,ey:opt.kingTarget.y,target:null,capture:false,castle:true,rook:opt.rook,rookTarget:opt.rookTarget,kingTarget:opt.kingTarget,castleSide:opt.side});
+        }
+      }
+      for(const d of p.worldDirs(p.c.d)){
+        if(aiSearchExpired())break;
+        const maxCells=p.c.fix?1:p.c.mc;
+        for(let cells=1;cells<=maxCells;cells++){
+          if(aiSearchExpired())break;
+          const unit=p.c.unitDist===null?d.dist*CELL:p.c.unitDist;
+          const moveDist=cells*unit;
+          if(aiLineBlockedByFriendly(p,d,moveDist))break;
+          const target=aiPathCapture(p,d,moveDist);
+          // 若该距离已经撞到敌子，优先以最先遇到的目标为落点。
+          const ex=target?target.x:p.x+d.x*moveDist,ey=target?target.y:p.y+d.y*moveDist;
+          const v0=p.c.fix?p.c.pw:slidingV0(unit,cells);
+          out.push({p,dir:d,cells,vx:d.x*v0,vy:d.y*v0,dist:moveDist,ex,ey,target,capture:!!target});
+        }
+      }
+    }
+  }
+  return out;
+}
+function aiQuant(v){return Math.round(v/CELL*20)/20;}
+function aiMoveSignature(c){
+  const p=c.p;
+  const fx=aiQuant(p.x),fy=aiQuant(p.y),tx=aiQuant(c.ex),ty=aiQuant(c.ey);
+  return `${p.id}:${fx},${fy}>${tx},${ty}`;
+}
+function aiReverseSignature(c){
+  const p=c.p;
+  const fx=aiQuant(p.x),fy=aiQuant(p.y),tx=aiQuant(c.ex),ty=aiQuant(c.ey);
+  return `${p.id}:${tx},${ty}>${fx},${fy}`;
+}
+function aiRepetitionPenalty(c){
+  const cfg=AI_DIFFICULTY_CFG[aiDifficulty]||AI_DIFFICULTY_CFG.normal;
+  const key=aiMoveSignature(c),reverse=aiReverseSignature(c);
+  let penalty=0;
+  for(let i=aiMoveHistory.length-1,age=1;i>=0&&age<=10;i--,age++){
+    const h=aiMoveHistory[i];
+    if(h.key===key) penalty+=Math.max(80,cfg.repeatPenalty-(age-1)*70);
+    else if(age<=2&&h.key===reverse) penalty+=cfg.reversePenalty;
+  }
+  return penalty;
+}
+function aiNearestEnemyDistance(col,x,y){
+  let best=Infinity;
+  for(const e of pieces){
+    if(!e.alive||e.col===col)continue;
+    best=Math.min(best,Math.hypot(e.x-x,e.y-y));
+  }
+  return best===Infinity?BOARD:best;
+}
+function aiPieceThreatAt(col,x,y,ignorePiece=null){
+  return aiThreatsAt(aiOpp(col),x,y,ignorePiece).length>0;
+}
+function aiNoProgressPenalty(c){
+  const p=c.p,cfg=AI_DIFFICULTY_CFG[aiDifficulty]||AI_DIFFICULTY_CFG.normal;
+  if(c.capture)return 0;
+  const before=aiNearestEnemyDistance(p.col,p.x,p.y);
+  const after=aiNearestEnemyDistance(p.col,c.ex,c.ey);
+  const progress=(before-after)/CELL;
+  const underThreat=aiPieceThreatAt(p.col,p.x,p.y,p);
+  let penalty=0;
+  // 未受攻击却主动远离最近敌子的移动，视为可能的无意义后退。
+  if(progress<-0.08&&!underThreat){
+    penalty+=Math.min(420,(-progress)*210*cfg.stagnationWeight);
+  }
+  // 连续多次不吃子、不产生明显攻击后，提高主动性的压力。
+  if(aiStagnationCount>=3){
+    const attack=aiAttackValueFrom(p,c.ex,c.ey,aiOpp(p.col));
+    if(attack<=0)penalty+=Math.min(420,(aiStagnationCount-2)*90*cfg.stagnationWeight);
+  }
+  return penalty;
+}
+function aiScoreImmediate(c){
+  const p=c.p,enemyCol=aiOpp(p.col);
+  const ex=c.ex,ey=c.ey;
+  let score=0;
+  score-=aiRepetitionPenalty(c);
+  score-=aiNoProgressPenalty(c);
+  // 王车易位作为一次主动的王安全与车活跃度调整。
+  if(c.castle){
+    score+=180;
+    if(aiIsKingThreatened(p.col,c.ex,c.ey,p))score-=900;
+  }
+  // 吃子优先，但避免为了小子直接送出大子。
+  if(c.target){
+    const v=aiPieceValue(c.target);
+    score+=v*16;
+    if(c.target.t.toUpperCase()==='K')score+=100000;
+  }
+  const centerDist=Math.hypot(ex-BOARD/2,ey-BOARD/2);
+  score+=(1-centerDist/(BOARD*0.707))*24;
+  if(!c.capture){
+    const progress=(aiNearestEnemyDistance(p.col,p.x,p.y)-aiNearestEnemyDistance(p.col,ex,ey))/CELL;
+    if(progress>0)score+=Math.min(180,progress*70*(1+(aiStagnationCount*0.18)));
+  }
+  score+=aiAttackValueFrom(p,ex,ey,enemyCol)*0.42;
+  const enemyKing=pieces.find(q=>q.alive&&q.col===enemyCol&&q.t.toUpperCase()==='K');
+  if(enemyKing&&aiTargetAtFrom(p,ex,ey,enemyKing.x,enemyKing.y))score+=900;
+  const myKing=pieces.find(q=>q.alive&&q.col===p.col&&q.t.toUpperCase()==='K');
+  if(myKing&&aiIsKingThreatened(p.col,myKing.x,myKing.y,p))score-=1800;
+  // 落点如果被对方直接反吃，按我方棋子价值扣分。
+  const bestCounter=aiBestCaptureValueAt(enemyCol,ex,ey,c.target);
+  if(bestCounter)score-=aiPieceValue(p)*1.15;
+  if(c.capture&&bestCounter)score+=aiPieceValue(c.target)*0.25-bestCounter*0.35;
+  if(aiFriendlyOnPath(p,c.dir,c.dist)>0)score-=75;
+  if(p.t.toUpperCase()==='K'&&!c.capture)score-=10;
+  // 尽量让主要棋子向前推进，同时避免极端贴边。
+  const edge=Math.min(ex,ey,BOARD-ex,BOARD-ey);
+  score+=Math.min(edge,60)*0.06;
+  return score;
+}
+function aiScoreAfterOpponentReply(c){
+  const p=c.p,enemyCol=aiOpp(p.col),ex=c.ex,ey=c.ey;
+  let worstReply=0;
+  for(const e of pieces){
+    if(!e.alive||e.col!==enemyCol||e===c.target)continue;
+    if(aiTargetAtFrom(e,e.x,e.y,ex,ey)){
+      worstReply=Math.max(worstReply,aiPieceValue(p)-aiPieceValue(e)*0.22);
+    }
+  }
+  // 对方能直接攻击己方王时，额外重罚。
+  const myKing=pieces.find(q=>q.alive&&q.col===p.col&&q.t.toUpperCase()==='K');
+  if(myKing){
+    const kingThreat=pieces.some(e=>e.alive&&e.col===enemyCol&&aiTargetAtFrom(e,e.x,e.y,myKing.x,myKing.y));
+    if(kingThreat)worstReply+=900;
+  }
+  return worstReply;
+}
+function aiApplyHypothetical(c){
+  const p=c.p,target=c.target||null,r=c.rook||null;
+  const state={x:p.x,y:p.y,vx:p.vx,vy:p.vy,moved:p.moved,targetAlive:target?target.alive:null};
+  const rState=r?{x:r.x,y:r.y,vx:r.vx,vy:r.vy,moved:r.moved,alive:r.alive}:null;
+  p.x=c.ex;p.y=c.ey;p.vx=0;p.vy=0;p.moved=true;
+  if(r){r.x=c.rookTarget.x;r.y=c.rookTarget.y;r.vx=0;r.vy=0;r.moved=true;}
+  if(target)target.alive=false;
+  return ()=>{
+    p.x=state.x;p.y=state.y;p.vx=state.vx;p.vy=state.vy;p.moved=state.moved;
+    if(r){r.x=rState.x;r.y=rState.y;r.vx=rState.vx;r.vy=rState.vy;r.moved=rState.moved;r.alive=rState.alive;}
+    if(target)target.alive=state.targetAlive;
+  };
+}
+function aiRankCandidates(candidates){
+  const scored=[];
+  for(const c of candidates){
+    if(aiSearchExpired())break;
+    scored.push({c,s:aiScoreImmediate(c)-aiScoreAfterOpponentReply(c)});
+  }
+  if(!scored.length)return candidates.length?[candidates[0]]:[];
+  return scored.sort((a,b)=>b.s-a.s).map(x=>x.c);
+}
+function aiExpertReplyScore(c,col){
+  const enemyCol=aiOpp(col);
+  const undo=aiApplyHypothetical(c);
+  try{
+    const opp=aiRankCandidates(aiFindCandidates(enemyCol)).slice(0,AI_DIFFICULTY_CFG.expert.replyBeam);
+    if(!opp.length)return 0;
+    let worst=-Infinity;
+    for(const oc of opp){
+      if(aiSearchExpired())break;
+      const undoOpp=aiApplyHypothetical(oc);
+      try{
+        const replies=aiRankCandidates(aiFindCandidates(col)).slice(0,6);
+        const bestReply=replies.length?Math.max(...replies.map(r=>aiScoreImmediate(r))):0;
+        worst=Math.max(worst,aiScoreImmediate(oc)-bestReply*0.74);
+      }finally{undoOpp();}
+    }
+    return worst===-Infinity?0:worst;
+  }finally{undo();}
+}
+function aiExpertPositionBonus(c,col){
+  const enemyCol=aiOpp(col),ex=c.ex,ey=c.ey;
+  let bonus=0;
+  const enemyTargets=[];
+  for(const e of pieces){
+    if(aiSearchExpired())break;
+    if(!e.alive||e.col!==enemyCol||e===c.target)continue;
+    if(aiTargetAtFrom(c.p,ex,ey,e.x,e.y))enemyTargets.push(e);
+  }
+  enemyTargets.sort((a,b)=>aiPieceValue(b)-aiPieceValue(a));
+  if(enemyTargets.length>=2)bonus+=Math.min(750,aiPieceValue(enemyTargets[0])*0.38+aiPieceValue(enemyTargets[1])*0.30);
+  const enemyKing=pieces.find(q=>q.alive&&q.col===enemyCol&&q.t.toUpperCase()==='K');
+  if(enemyKing&&aiTargetAtFrom(c.p,ex,ey,enemyKing.x,enemyKing.y))bonus+=1500;
+  let incoming=0;
+  for(const e of pieces){
+    if(!e.alive||e.col!==enemyCol||e===c.target)continue;
+    if(aiTargetAtFrom(e,e.x,e.y,ex,ey))incoming=Math.max(incoming,aiPieceValue(e));
+  }
+  if(incoming)bonus-=aiPieceValue(c.p)*1.75;
+  if(c.capture&&incoming<=aiPieceValue(c.p)*0.45)bonus+=aiPieceValue(c.target||c.p)*0.38;
+  const centerDist=Math.hypot(ex-BOARD/2,ey-BOARD/2);
+  bonus+=(1-centerDist/(BOARD*0.707))*38;
+  const edge=Math.min(ex,ey,BOARD-ex,BOARD-ey);
+  bonus+=Math.min(edge,60)*0.15;
+  return bonus;
+}
+function chooseAIMove(col){
+  const started=performance.now();
+  aiSearchDeadline=started+aiThinkTimeMs;
+  try{
+    const candidates=aiFindCandidates(col);
+    if(!candidates.length)return null;
+    const cfg=AI_DIFFICULTY_CFG[aiDifficulty]||AI_DIFFICULTY_CFG.normal;
+    if(aiDifficulty==='easy'){
+      const ranked=aiRankCandidates(candidates).slice(0,cfg.rootBeam);
+      return ranked[Math.floor(Math.random()*ranked.length)]||ranked[0];
+    }
+    let pool=aiRankCandidates(candidates);
+    pool=pool.slice(0,cfg.rootBeam);
+    let best=null,bestScore=-Infinity;
+    for(const c of pool){
+      if(aiSearchExpired())break;
+      let score=aiScoreImmediate(c)-aiScoreAfterOpponentReply(c);
+      if(aiDifficulty==='hard'){
+        const enemyCol=aiOpp(col);
+        const undo=aiApplyHypothetical(c);
+        try{
+          const opp=aiRankCandidates(aiFindCandidates(enemyCol)).slice(0,cfg.replyBeam);
+          if(opp.length&&!aiSearchExpired())score-=Math.max(...opp.map(oc=>aiScoreImmediate(oc)))*0.60;
+        }finally{undo();}
+      }else if(aiDifficulty==='expert'){
+        score+=aiExpertPositionBonus(c,col);
+        if(!aiSearchExpired())score-=aiExpertReplyScore(c,col)*0.68;
+      }
+      score+=Math.random()*cfg.noise;
+      if(score>bestScore){bestScore=score;best=c;}
+    }
+    // 即使到达时间上限，也返回已经计算出的最好走法。
+    if(best)return best;
+    return pool[0]||candidates[0];
+  }finally{
+    aiSearchDeadline=0;
+  }
+}
+function performAITurn(col,token){
+  if(token!==aiThinkToken)return;
+  if(gameMode!=='computer'||over||turn!==col||anyMoving())return;
+  if(settingsOpen){scheduleAI();return;}
+  const best=chooseAIMove(col);
+  if(token!==aiThinkToken||!best)return;
+  pushUndo();
+  if(best.castle){
+    best.p.castleActive=true;best.rook.castleActive=true;
+    best.p.tgt={x:best.kingTarget.x,y:best.kingTarget.y};
+    best.rook.tgt={x:best.rookTarget.x,y:best.rookTarget.y};
+    best.p.moved=true;best.rook.moved=true;
+  }else{
+    best.p.vx=best.vx;
+    best.p.vy=best.vy;
+    best.p.moved=true;
+    if(best.p.isKnight)setKnightMovePlan(best.p,best.dir);
+  }
+  aiMoveHistory.push({key:aiMoveSignature(best),capture:!!best.capture,pieceId:best.p.id});
+  if(aiMoveHistory.length>12)aiMoveHistory.shift();
+  aiStagnationCount=best.capture?0:aiStagnationCount+1;
+  markShotStarted();
+}
+function enemyAt(wx,wy,myCol){const cr=captureR();return pieces.find(p=>p.alive&&p.col!==myCol&&Math.hypot(p.x-wx,p.y-wy)<cr*2);}
+function canCapture(atk,vic){
+  if(atk.col===vic.col||atk.col!==activePlayer||!atk.isMoving||atk.tgt)return false;
+  const dist=Math.hypot(vic.x-atk.x,vic.y-atk.y);
+  if(dist>atk.cr+vic.cr)return false;
+  if(atk.isPawn)return atk.isInSideAttackZone(vic.x,vic.y);
+  if(dist===0)return false;
+  const cx=(vic.x-atk.x)/dist,cy=(vic.y-atk.y)/dist;
+  for(const cd of atk.captureDirs())if(cx*cd.x+cy*cd.y>=Math.cos(CAT))return true;
+  return false;
+}
+
+// 马可穿越己方：严格采用“起点一次确定白名单”的机制。
+// 1) 马出手瞬间，以马的起点为圆心，按设置的范围一次性扫描己方棋子。
+// 2) 命中的棋子加入本次移动专属的免碰撞白名单。
+// 3) 移动过程中绝不更新、不重新计算白名单。
+// 4) 马停止后立即清空白名单，恢复正常碰撞。
+// 注意：这里完全不使用移动轨迹，也不让动画速度参与白名单判定。
+function knightPassRadiusPx(){
+  return Math.max(0,Math.min(3,knightPassRadiusCells))*CELL;
+}
+
+function buildKnightIgnoreSet(p){
+  p.knightIgnoreIds.clear();
+  p.knightPassActive=false;
+  if(!kpEl.checked||!p||!p.isKnight)return;
+
+  // 只读取出手这一刻的起点；后续移动期间不再改变。
+  const startX=p.x,startY=p.y;
+  const radius=knightPassRadiusPx();
+  const radiusSq=radius*radius;
+
+  for(const q of pieces){
+    if(!q.alive||q===p||q.col!==p.col)continue;
+    const dx=q.x-startX,dy=q.y-startY;
+    if(dx*dx+dy*dy<=radiusSq){
+      p.knightIgnoreIds.add(q.id);
+    }
+  }
+
+  // 白名单一旦建立，本次移动期间保持不变。
+  p.knightPassActive=true;
+}
+
+function setKnightMovePlan(p,dir){
+  if(!p||!p.isKnight)return;
+  // 先按起点建立固定白名单，再开始移动。
+  p.moveStart={x:p.x,y:p.y};
+  p.knightIgnoreIds.clear();
+  buildKnightIgnoreSet(p);
+}
+
+function setKnightMovePlanFromVelocity(p){
+  if(!p||!p.isKnight)return;
+  // 联网/AI 与本地出手完全一致：以收到/决定速度时的当前坐标作为起点。
+  setKnightMovePlan(p,null);
+}
+
+function shouldSkipKnightFriendlyCollision(a,b){
+  if(a.col!==b.col)return false;
+  if(a.isKnight&&a.knightPassActive&&a.knightIgnoreIds.has(b.id))return true;
+  if(b.isKnight&&b.knightPassActive&&b.knightIgnoreIds.has(a.id))return true;
+  return false;
+}
+
+function collide(){
+  for(let i=0;i<pieces.length;i++)for(let j=i+1;j<pieces.length;j++){
+    const a=pieces[i],b=pieces[j];if(!a.alive||!b.alive)continue;
+    const dx=b.x-a.x,dy=b.y-a.y,dist=Math.hypot(dx,dy);
+    const capMinD=a.cr+b.cr;
+    if(dist>=capMinD||dist===0)continue;
+    if(shouldSkipKnightFriendlyCollision(a,b))continue;
+    if(a.castleActive||b.castleActive)continue;
+    if(canCapture(a,b)){b.alive=false;a.tgt={x:b.x,y:b.y};checkWin();continue;}
+    if(canCapture(b,a)){a.alive=false;b.tgt={x:a.x,y:a.y};checkWin();continue;}
+    const physMinD=a.r+b.r;
+    if(dist>=physMinD)continue;
+    const nx=dx/dist,ny=dy/dist,dvn=(a.vx-b.vx)*nx+(a.vy-b.vy)*ny;
+    if(dvn<=0)continue;
+    const ma=a.mass,mb=b.mass,imp=(1+ELAST)*dvn/(1/ma+1/mb);
+    a.vx-=imp*nx/ma;a.vy-=imp*ny/ma;b.vx+=imp*nx/mb;b.vy+=imp*ny/mb;
+    const tv=(a.vx-b.vx)*(-ny)+(a.vy-b.vy)*nx;
+    a.av+=tv*0.04*(mb/(ma+mb));b.av-=tv*0.04*(ma/(ma+mb));
+    const ov=(physMinD-dist)/2+0.5,totalM=ma+mb;
+    a.x-=ov*nx*(mb/totalM);a.y-=ov*ny*(mb/totalM);b.x+=ov*nx*(ma/totalM);b.y+=ov*ny*(ma/totalM);
+  }
+}
+function checkWin(){const ok=turn==='white'?'k':'K';if(!pieces.some(p=>p.alive&&p.t===ok)){over=true;clockRunning=false;document.getElementById('msg').innerText=`👑 ${activePlayer==='white'?'白方':'黑方'} 获胜！`;updateUndoUI();if(gameMode==='network'&&!applyingRemote)sendNetwork({type:'state',room:networkRoom,state:saveSnapshot()});}}
+function updateTurnState(){
+  if(over||dragging)return;
+  if(!anyMoving()&&hasMoved){
+    const finishedPlayer=turn;
+    turn=turn==='white'?'black':'white';activePlayer=turn;hasMoved=false;
+    updateTurnText();
+    document.getElementById('msg').innerText='';
+    if(clockMode==='move')timeRemaining[turn]=moveTimeMs;
+    updateUndoUI();clockRunning=clockEnabled;
+    lastClockTick=performance.now();updateClockUI();
+    if(gameMode==='network'&&!applyingRemote){sendNetwork({type:'state',room:networkRoom,state:saveSnapshot()});}
+    if(gameMode==='computer'&&turn!==(playerSide||'white'))scheduleAI();
+    applyingRemote=false;
+  }
+}
+
+function pawnAim(pawn,dragAngle,rawCells){
+  // 兵无可吃敌子时，只允许沿自身正前方移动。
+  const bestDir=pawn.getForwardWorldDir();
+  const forwardAngle=Math.atan2(bestDir.y,bestDir.x);
+  let bestDiff=Math.abs(dragAngle-forwardAngle);
+  if(bestDiff>Math.PI)bestDiff=2*Math.PI-bestDiff;
+  if(bestDiff>Math.PI/6)return null;
+  const cells=!pawn.moved?(softSnap(rawCells,2) >= 2 ? 2 : 1):1;
+  return{dir:bestDir,cells};
+}
+
+// ★★★ 计算滑动棋子的精确力度 ★★★
+//   unitDist: 该棋子单格的世界距离（车=CELL, 象=√2·CELL）
+//   cells: 吸附后的整数格数
+//   返回精确初速度标量
+function slidingV0(unitDist,cells){
+  if(cells<=0)return 0;
+  // 对于皇后，不同方向的unitDist不同，由调用方传入实际值
+  return getCachedV0(unitDist,cells);
+}
+
+// ===== 王车易位 =====
+const CASTLE_START_TOL=CELL*0.22;
+function squareCenter(row,col){return{x:col*CELL+CELL/2,y:row*CELL+CELL/2};}
+function pieceInSquare(row,col,except=null){
+  const pos=squareCenter(row,col);
+  return pieces.find(p=>p!==except&&p.alive&&Math.abs(p.x-pos.x)<=CELL/2&&Math.abs(p.y-pos.y)<=CELL/2);
+}
+function pieceAtStartSquare(row,col,color,type){
+  const pos=squareCenter(row,col);
+  const u=type.toUpperCase();
+  return pieces.find(p=>p.alive&&p.col===color&&p.t.toUpperCase()===u&&Math.hypot(p.x-pos.x,p.y-pos.y)<=CASTLE_START_TOL);
+}
+function clearBetweenSquares(row,c1,c2){
+  const lo=Math.min(c1,c2)+1,hi=Math.max(c1,c2)-1;
+  for(let col=lo;col<=hi;col++){
+    if(pieceInSquare(row,col))return false;
+  }
+  return true;
+}
+function getCastleOptions(king){
+  if(!king||!king.alive||king.t.toUpperCase()!=='K'||king.moved)return[];
+  const row=king.col==='white'?7:0;
+  const e=squareCenter(row,4);
+  if(Math.hypot(king.x-e.x,king.y-e.y)>CASTLE_START_TOL)return[];
+  const out=[];
+  for(const rookCol of [7,0]){
+    const rook=pieceAtStartSquare(row,rookCol,king.col,'R');
+    if(!rook||rook.moved)continue;
+    if(!clearBetweenSquares(row,4,rookCol))continue;
+    const kingCol=rookCol===7?6:2;
+    const rookTargetCol=rookCol===7?5:3;
+    const kTarget=squareCenter(row,kingCol),rTarget=squareCenter(row,rookTargetCol);
+    // 两个目标格必须没有其他棋子。
+    if(pieceInSquare(row,kingCol,king)||pieceInSquare(row,rookTargetCol,rook))continue;
+    out.push({side:rookCol===7?'king':'queen',rook,kingTarget:kTarget,rookTarget:rTarget,row});
+  }
+  return out;
+}
+function getCastleOptionForDrag(king,dragAngle,dragDistance){
+  if(!king||king.t.toUpperCase()!=='K'||dragDistance<CHARGE_PX_PER_CELL*1.5)return null;
+  let best=null,bestDiff=Infinity;
+  for(const opt of getCastleOptions(king)){
+    const dirX=opt.side==='king'?1:-1;
+    const targetAngle=Math.atan2(0,dirX);
+    let diff=Math.abs(dragAngle-targetAngle);
+    if(diff>Math.PI)diff=2*Math.PI-diff;
+    if(diff<bestDiff){bestDiff=diff;best=opt;}
+  }
+  return bestDiff<=Math.PI/6?best:null;
+}
+function startCastling(king,opt){
+  if(!opt)return false;
+  pushUndo();
+  king.castleActive=true;opt.rook.castleActive=true;
+  king.tgt={x:opt.kingTarget.x,y:opt.kingTarget.y};
+  opt.rook.tgt={x:opt.rookTarget.x,y:opt.rookTarget.y};
+  king.moved=true;opt.rook.moved=true;
+  markShotStarted();
+  if(gameMode==='network'&&!applyingRemote){
+    sendNetwork({type:'castle',room:networkRoom,kingId:king.id,rookId:opt.rook.id,kingTarget:king.tgt,rookTarget:opt.rook.tgt,timeRemaining,turn});
+  }
+  return true;
+}
+function applyNetworkCastle(msg){
+  if(!msg||over||anyMoving()||gameMode!=='network')return;
+  const myRole=networkAssignedRole||playerSide;
+  if(networkRoleMode==='player'&&turn===myRole)return;
+  const king=pieces.find(p=>p.id===msg.kingId&&p.alive&&p.col===turn&&p.t.toUpperCase()==='K');
+  const rook=pieces.find(p=>p.id===msg.rookId&&p.alive&&p.col===turn&&p.t.toUpperCase()==='R');
+  if(!king||!rook||!msg.kingTarget||!msg.rookTarget)return;
+  king.castleActive=true;rook.castleActive=true;
+  king.tgt={x:Number(msg.kingTarget.x),y:Number(msg.kingTarget.y)};
+  rook.tgt={x:Number(msg.rookTarget.x),y:Number(msg.rookTarget.y)};
+  king.moved=true;rook.moved=true;
+  markShotStarted();
+}
+
+// ===== 输入处理：Pointer Events（同时兼容鼠标与触屏） =====
+// 画布在手机上会被 CSS 缩放，需按实际显示尺寸换算回内部坐标
+function evtBoardPos(e){
+  const rc=C.getBoundingClientRect();
+  const sx=C.width/rc.width,sy=C.height/rc.height;
+  return toBoard((e.clientX-rc.left)*sx,(e.clientY-rc.top)*sy);
+}
+
+C.addEventListener('pointerdown',e=>{
+  if(e.pointerType==='mouse'&&e.button!==0)return;
+  e.preventDefault();
+  if(settingsOpen||over||anyMoving()||!canLocalControl())return;
+  const bp=evtBoardPos(e);
+  // 触屏点按判定更宽松，方便手指选中棋子
+  const tol=e.pointerType==='touch'?14:4;
+  const hit=pieces.find(p=>p.alive&&p.col===turn&&Math.hypot(p.x-bp.x,p.y-bp.y)<p.cr+tol);
+  if(hit){sel=hit;dragging=true;dragCur=bp;}
+});
+window.addEventListener('pointermove',e=>{
+  if(!dragging)return;
+  e.preventDefault();
+  dragCur=evtBoardPos(e);
+});
+function markShotStarted(){
+  hasMoved=true;
+  gameStarted=true;
+  activePlayer=turn;
+  clockRunning=true;
+  lastClockTick=performance.now();
+  applySettingsLockUI();
+  refreshNetworkUiLock();
+}
+function syncShot(piece){
+  if(gameMode==='network'&&!applyingRemote){
+    sendNetwork({type:'shot',room:networkRoom,id:piece.id,vx:piece.vx,vy:piece.vy,moved:piece.moved,timeRemaining,turn});
+  }
+}
+function applyNetworkShot(msg){
+  if(!msg||over||anyMoving()||gameMode!=='network')return;
+  const myRole=networkAssignedRole||playerSide;
+  if(networkRoleMode==='player'&&turn===myRole)return;
+  const p=pieces.find(q=>q.id===msg.id&&q.alive&&q.col===turn);if(!p)return;
+  p.vx=Number(msg.vx)||0;
+  p.vy=Number(msg.vy)||0;
+  p.moved=true;
+  if(p.isKnight)setKnightMovePlanFromVelocity(p);
+  hasMoved=true;
+  gameStarted=true;
+  activePlayer=turn;
+  if(msg.timeRemaining&&Number.isFinite(msg.timeRemaining.white)&&Number.isFinite(msg.timeRemaining.black)){
+    timeRemaining={white:msg.timeRemaining.white,black:msg.timeRemaining.black};
+  }
+  clockRunning=clockEnabled;
+  lastClockTick=performance.now();
+  applySettingsLockUI();
+  refreshNetworkUiLock();
+}
+function maybeFinishRemoteSync(){
+  if(gameMode==='network'&&!applyingRemote&&turn!==playerSide){
+    // 本地回合结束后同步最终盘面，避免不同设备帧率造成微小偏差。
+    sendNetwork({type:'state',room:networkRoom,state:saveSnapshot()});
+  }
+}
+window.addEventListener('pointerup',()=>{
+  if(!dragging||!sel){dragging=false;sel=null;return;}
+  if(over){dragging=false;sel=null;return;}
+  const dx=dragCur.x-sel.x,dy=dragCur.y-sel.y,dd=Math.hypot(dx,dy);
+  if(dd<=15){dragging=false;sel=null;return;}
+  const ma=Math.atan2(dy,dx);
+  const rawCells=dd/CHARGE_PX_PER_CELL;
+  const pawnRawCells=dd/PAWN_CHARGE_PX_PER_CELL;
+
+  const castleOpt=sel&&sel.t.toUpperCase()==='K'?getCastleOptionForDrag(sel,ma,dd):null;
+  if(castleOpt){
+    startCastling(sel,castleOpt);
+    dragging=false;sel=null;
+    return;
+  }
+
+  let willFire=false;
+  if(sel.isPawn){
+    for(const sd of sel.getSideWorldDirs()){const tx=sel.x+sd.x*Math.hypot(CELL,CELL),ty=sel.y+sd.y*Math.hypot(CELL,CELL);if(enemyAt(tx,ty,sel.col)){let diff=Math.abs(ma-Math.atan2(sd.y,sd.x));if(diff>Math.PI)diff=2*Math.PI-diff;if(diff<PAWN_CAP_AIM_TOL){willFire=true;break;}}}
+    if(!willFire&&pawnAim(sel,ma,rawCells))willFire=true;
+  }else{
+    for(const d of sel.worldDirs(sel.c.d)){let diff=Math.abs(ma-Math.atan2(d.y,d.x));if(diff>Math.PI)diff=2*Math.PI-diff;if(diff<CAT){willFire=true;break;}}
+  }
+  if(willFire)pushUndo();
+
+  let fired=false;
+  if(sel.isPawn){
+    const sides=sel.getSideWorldDirs();let bestDir=null,bestDiff=Infinity;
+    for(const sd of sides){const tx=sel.x+sd.x*Math.hypot(CELL,CELL),ty=sel.y+sd.y*Math.hypot(CELL,CELL);if(enemyAt(tx,ty,sel.col)){let diff=Math.abs(ma-Math.atan2(sd.y,sd.x));if(diff>Math.PI)diff=2*Math.PI-diff;if(diff<bestDiff&&diff<PAWN_CAP_AIM_TOL){bestDiff=diff;bestDir=sd;}}}
+    if(bestDir){sel.vx=bestDir.x*PW.pwCap;sel.vy=bestDir.y*PW.pwCap;sel.moved=true;markShotStarted();fired=true;}
+    if(!fired){
+      const aim=pawnAim(sel,ma,pawnRawCells);
+      if(aim){const pw=aim.cells===2?PW.pwP1:PW.pwP;sel.vx=aim.dir.x*pw;sel.vy=aim.dir.y*pw;sel.moved=true;markShotStarted();fired=true;}
+    }
+  }else{
+    const ds=sel.worldDirs(sel.c.d);let best=null,minD=Infinity;
+    for(const d of ds){let diff=Math.abs(ma-Math.atan2(d.y,d.x));if(diff>Math.PI)diff=2*Math.PI-diff;if(diff<minD&&diff<CAT){minD=diff;best=d;}}
+    if(best){
+      if(sel.c.fix){
+        // 固定力度棋子（马、王）：使用预计算的精确常量
+        sel.vx=best.x*sel.c.pw;sel.vy=best.y*sel.c.pw;
+        if(sel.isKnight)setKnightMovePlan(sel,best);
+      }else{
+        // ★★★ 滑动棋子（车、象、后）：实时精确计算 ★★★
+        //   旧代码: pwPerCell * cells （解析公式，多格时偏大）
+        //   新代码: calcExactV0(cells * unitDist) （数值反推，精确）
+        const cells=softSnap(rawCells,sel.c.mc);
+        const fc=Math.max(cells<1?cells:1,cells);
+        // 确定该方向的实际单位距离
+        //   车: unitDist=CELL (已在CFG中设置)
+        //   象: unitDist=√2·CELL (已在CFG中设置)
+        //   后: 正交方向=CELL, 对角方向=√2·CELL → 用best.dist还原
+        let unitDist=sel.c.unitDist;
+        if(unitDist===null){
+          // 皇后：根据方向的实际dist推断unitDist
+          //   best.dist来自CFG_TEMPLATE中的第3个分量
+          //   正交=1, 对角=√2 → unitDist = best.dist * CELL
+          unitDist=best.dist*CELL;
+        }
+        const v0=slidingV0(unitDist,fc);
+        sel.vx=best.x*v0;sel.vy=best.y*v0;
+      }
+      sel.moved=true;markShotStarted();
+      fired=true;
+    }
+  }
+  // 普通出手统一发送，兵也必须同步，避免对手一直停在旧回合。
+  if(gameMode==='network'&&fired&&!applyingRemote){
+    syncShot(sel);
+  }
+  dragging=false;sel=null;
+});
+// 触摸被系统中断（来电、手势冲突等）时复位拖拽状态
+window.addEventListener('pointercancel',()=>{dragging=false;sel=null;});
+
+function board(){
+  X.fillStyle='#5d4037';X.fillRect(0,0,C.width,C.height);
+  X.strokeStyle='#8d6e63';X.lineWidth=2;X.strokeRect(BORDER-1,BORDER-1,BOARD+2,BOARD+2);
+  for(let r=0;r<8;r++)for(let c=0;c<8;c++){X.fillStyle=(r+c)%2===0?'#eeeed2':'#769656';X.fillRect(BORDER+c*CELL,BORDER+r*CELL,CELL,CELL);}
+}
+function snapDisplay(v,mc){const s=softSnap(v,mc);return Number.isInteger(s)?s.toFixed(0):s.toFixed(2);}
+function drawChargeBar(bx,by,mc,raw,dist,fn){
+  const cl=Math.max(0,Math.min(mc,raw)),pct=cl/mc;
+  X.fillStyle='rgba(0,0,0,.8)';X.beginPath();X.roundRect(bx-2,by-2,BAR_W+4,BAR_H+4,4);X.fill();
+  const g=X.createLinearGradient(0,by+BAR_H,0,by);g.addColorStop(0,'#2ecc71');g.addColorStop(.5,'#f1c40f');g.addColorStop(1,'#e74c3c');
+  X.fillStyle=g;X.fillRect(bx,by+BAR_H*(1-pct),BAR_W,BAR_H*pct);
+  X.strokeStyle='rgba(255,255,255,.35)';X.lineWidth=1;
+  for(let i=1;i<mc;i++){const yy=by+BAR_H-i*(BAR_H/mc);X.beginPath();X.moveTo(bx,yy);X.lineTo(bx+BAR_W,yy);X.stroke();}
+  X.strokeStyle='#fff';X.lineWidth=1.5;X.strokeRect(bx,by,BAR_W,BAR_H);
+  X.fillStyle='#fff';X.font='bold 13px Arial';X.textAlign='left';X.fillText(fn(cl,mc,dist),bx+BAR_W+6,by+BAR_H/2+4);
+}
+function aim(){
+  if(!dragging||!sel)return;
+  const dx=dragCur.x-sel.x,dy=dragCur.y-sel.y,dd=Math.hypot(dx,dy),ma=Math.atan2(dy,dx);
+  const cp=toCanvas(sel.x,sel.y),dcp=toCanvas(dragCur.x,dragCur.y);
+  const rawCells=dd/CHARGE_PX_PER_CELL;
+  const pawnRawCells=dd/PAWN_CHARGE_PX_PER_CELL;
+
+  if(sel.isPawn){
+    let aimingCap=false;
+    const sides=sel.getSideWorldDirs();
+    for(const sd of sides){
+      const tx=sel.x+sd.x*Math.hypot(CELL,CELL),ty=sel.y+sd.y*Math.hypot(CELL,CELL),tcp=toCanvas(tx,ty),enemy=enemyAt(tx,ty,sel.col),sa=Math.atan2(sd.y,sd.x);
+      let diff=Math.abs(ma-sa);if(diff>Math.PI)diff=2*Math.PI-diff;const aimed=diff<PAWN_CAP_AIM_TOL;
+      if(enemy&&aimed)aimingCap=true;
+      X.beginPath();X.moveTo(cp.x,cp.y);const ll=enemy?Math.hypot(CELL,CELL)*1.2:Math.hypot(CELL,CELL)*0.7;
+      X.lineTo(cp.x+sd.x*ll,cp.y+sd.y*ll);
+      if(enemy&&aimed){X.strokeStyle='rgba(231,76,60,.95)';X.lineWidth=3;X.setLineDash([]);}
+      else if(enemy){X.strokeStyle='rgba(231,76,60,.5)';X.lineWidth=2;X.setLineDash([4,4]);}
+      else{X.strokeStyle='rgba(255,255,255,.12)';X.lineWidth=1;X.setLineDash([3,5]);}
+      X.stroke();
+      if(enemy){X.beginPath();X.arc(tcp.x,tcp.y,6,0,Math.PI*2);X.fillStyle=aimed?'rgba(231,76,60,.9)':'rgba(231,76,60,.4)';X.fill();}
+    }
+    const pawnResult=pawnAim(sel,ma,pawnRawCells);
+    const forward=sel.getForwardWorldDir();
+    const forwardActive=!!pawnResult;
+    X.setLineDash([6,4]);X.lineWidth=2;
+    X.beginPath();X.moveTo(cp.x,cp.y);X.lineTo(cp.x+forward.x*(forwardActive?CELL*3:CELL*1.5),cp.y+forward.y*(forwardActive?CELL*3:CELL*1.5));
+    X.strokeStyle=forwardActive?'rgba(46,204,113,.9)':'rgba(255,255,255,.22)';X.stroke();
+    X.setLineDash([]);X.beginPath();X.moveTo(cp.x,cp.y);X.lineTo(dcp.x,dcp.y);X.strokeStyle='rgba(241,196,15,.7)';X.lineWidth=3;X.stroke();
+    const bx=cp.x+45,by=cp.y-50;
+    if(aimingCap){X.fillStyle='rgba(231,76,60,.9)';X.font='bold 14px Microsoft YaHei';X.textAlign='center';X.fillText('⚔️ 侧方吃子 √2格',cp.x,cp.y-45);}
+    else if(pawnResult){drawChargeBar(bx,by,2,pawnRawCells,1,(v,mc)=>`${snapDisplay(v,mc)}→${pawnResult.cells}格`);}
+    return;
+  }
+
+  const ds=sel.worldDirs(sel.c.d);
+  let aimDir=null,aimDiff=Infinity;
+  for(const d of ds){let diff=Math.abs(ma-Math.atan2(d.y,d.x));if(diff>Math.PI)diff=2*Math.PI-diff;if(diff<aimDiff&&diff<CAT){aimDiff=diff;aimDir=d;}}
+  X.setLineDash([6,4]);X.lineWidth=2;
+  for(const d of ds){let diff=Math.abs(ma-Math.atan2(d.y,d.x));if(diff>Math.PI)diff=2*Math.PI-diff;const act=diff<CAT;X.beginPath();X.moveTo(cp.x,cp.y);X.lineTo(cp.x+d.x*(act?CELL*5:CELL*2.5),cp.y+d.y*(act?CELL*5:CELL*2.5));X.strokeStyle=act?'rgba(46,204,113,.9)':'rgba(255,255,255,.2)';X.stroke();}
+  X.setLineDash([]);X.beginPath();X.moveTo(cp.x,cp.y);X.lineTo(dcp.x,dcp.y);X.strokeStyle='rgba(241,196,15,.7)';X.lineWidth=3;X.stroke();
+  const bx=cp.x+45,by=cp.y-50;
+  if(!sel.c.fix&&aimDir){drawChargeBar(bx,by,sel.c.mc,rawCells,aimDir.dist,(v,mc,dist)=>{const s=softSnap(v,mc),disp=Number.isInteger(s)?s.toFixed(0):s.toFixed(2),dt=dist===1?'':(Math.abs(dist-Math.SQRT2)<0.01?' √2':` ×${dist.toFixed(2)}`);return`${disp}${dt}`});}
+  else if(!sel.c.fix&&!aimDir){drawChargeBar(bx,by,sel.c.mc,rawCells,1,(v,mc)=>snapDisplay(v,mc));}
+  else{X.fillStyle='rgba(241,196,15,.9)';X.font='bold 14px Microsoft YaHei';X.textAlign='center';X.fillText('固定力度',cp.x,cp.y-45);}
+}
+
+function isMobileSpeedProfile(){
+  return !!(window.matchMedia && (window.matchMedia('(max-width:700px)').matches || window.matchMedia('(pointer:coarse)').matches));
+}
+function getEffectiveAnimationSpeed(){
+  // 实测移动端 1.8× 约等于桌面端 1.0×，因此移动端做 1.8× 速度补偿。
+  const calibration=isMobileSpeedProfile()?1/1.8:1;
+  return Math.max(0.01,Math.min(3,animationSpeed*calibration));
+}
+function loop(now){
+  const t=now||performance.now();
+  tickClock(t);
+  const speed=getEffectiveAnimationSpeed();
+  // 动画速度只改变模拟时间流逝，不改变一次碰撞判定所跨越的物理步长。
+  // 固定最大子步长，避免不同速度下出现不同的碰撞/交互结果。
+  const MAX_PHYS_STEP=0.25;
+  const substeps=Math.max(1,Math.ceil(speed/MAX_PHYS_STEP));
+  const step=speed/substeps;
+  X.clearRect(0,0,C.width,C.height);board();
+  if(!settingsOpen){
+    for(let i=0;i<substeps;i++){collide();pieces.forEach(p=>p.update(step));}
+  }
+  pieces.forEach(p=>p.draw());
+  if(!settingsOpen){aim();updateTurnState();}
+  requestAnimationFrame(loop);
+}
+kpEl.checked=true;wmEl.checked=false;pieceGlyphMode='chess';pieceGlyphModeEl.value='chess';aiDifficultyEl.value='normal';aiThinkEl.value='1.0';aiThinkTimeMs=1000;animationSpeed=1.0;speedEl.value='1.00';speedLabelEl.textContent='1.00×';updateKnightPassUI();updateCaptureAngleUI();updateClockConfigUI(true);initPieces();updateUndoUI();updateClockUI();
+// 默认模式始终为本地双人；房间状态单独实时显示，不强制切换游戏模式。
+const servedByGameServer=location.protocol==='http:'||location.protocol==='https:';
+modeEl.value='local';
+ensureDefaultWebSocketUrl();
+// 页面一打开就显示 1～10 号房间的基础状态；服务器连接后立即用权威数据覆盖。
+renderRoomList(Array.from({length:10},(_,i)=>({
+  id:i+1,name:`房间 ${i+1}`,count:0,capacity:10,players:0,spectators:0,
+  whiteName:'',blackName:'',swapEnabled:false
+})));
+updateModeUI(false);applySettingsLockUI();refreshNetworkUiLock();
+setSettingsOpen(false);
+// 默认本地双人；只有切换到“联网对战”后才显示并连接房间状态。
+if(gameMode==='network'){
+  connectLobbyObserver();
+}else{
+  closeLobbyObserver();
+}
+loop(performance.now());
+</script>
+</body>
+</html>
