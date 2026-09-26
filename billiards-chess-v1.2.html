@@ -715,10 +715,45 @@ function applyRoomSettings(settings,fromRemote=true){
   if(Number.isFinite(pieceDeg))CAT=Math.max(0,Math.min(45,pieceDeg))*Math.PI/180;
   updateCaptureAngleUI();
 
-  if(typeof settings.clockEnabled==='boolean')clockEnabled=settings.clockEnabled;
-  if(settings.clockMode==='total'||settings.clockMode==='move')clockMode=settings.clockMode;
-  if(Number.isFinite(settings.totalTimeMs))totalTimeMs=Math.max(60000,Math.min(180*60000,settings.totalTimeMs));
-  if(Number.isFinite(settings.moveTimeMs))moveTimeMs=Math.max(5000,Math.min(600000,settings.moveTimeMs));
+  // 记录应用房间设置前的计时规则。
+  // 服务器在一次设置变更后可能连续广播 room-settings + room-update；
+  // 相同设置再次到达时不能把计时器重新初始化。
+  const prevClockEnabled=clockEnabled;
+  const prevClockMode=clockMode;
+  const prevTotalTimeMs=totalTimeMs;
+  const prevMoveTimeMs=moveTimeMs;
+
+  const nextClockEnabled=
+    typeof settings.clockEnabled==='boolean'
+      ? settings.clockEnabled
+      : clockEnabled;
+
+  const nextClockMode=
+    settings.clockMode==='total'||settings.clockMode==='move'
+      ? settings.clockMode
+      : clockMode;
+
+  const nextTotalTimeMs=
+    Number.isFinite(settings.totalTimeMs)
+      ? Math.max(60000,Math.min(180*60000,settings.totalTimeMs))
+      : totalTimeMs;
+
+  const nextMoveTimeMs=
+    Number.isFinite(settings.moveTimeMs)
+      ? Math.max(5000,Math.min(600000,settings.moveTimeMs))
+      : moveTimeMs;
+
+  const timerRulesChanged=
+    prevClockEnabled!==nextClockEnabled ||
+    prevClockMode!==nextClockMode ||
+    prevTotalTimeMs!==nextTotalTimeMs ||
+    prevMoveTimeMs!==nextMoveTimeMs;
+
+  clockEnabled=nextClockEnabled;
+  clockMode=nextClockMode;
+  totalTimeMs=nextTotalTimeMs;
+  moveTimeMs=nextMoveTimeMs;
+
   if(Number.isFinite(settings.undoLimit))undoLimit=Math.max(0,Math.min(99,Math.round(settings.undoLimit)));
   undoLimitEl.value=String(undoLimit);
   while(undoStack.length>undoLimit)undoStack.shift();
@@ -726,8 +761,9 @@ function applyRoomSettings(settings,fromRemote=true){
   updateClockConfigUI(true);
   updateKnightPassRadiusHelp();
 
-  // 未开局时统一刷新初始计时；已经开局后规则已被服务器锁定。
-  if(!gameStarted){
+  // 只有计时规则真的发生变化时，才在未开局状态重新初始化计时器。
+  // 相同房间设置重复广播不会再导致计时器跳回初始值。
+  if(!gameStarted && timerRulesChanged){
     const initial=clockMode==='total'?totalTimeMs:moveTimeMs;
     timeRemaining={white:initial,black:initial};
     clockRunning=false;
